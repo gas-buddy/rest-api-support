@@ -1,0 +1,36 @@
+{
+  "name": "rest-api-support",
+  "version": "0.1.1",
+  "description": "URL manipulation and other support infrastructure for making REST api calls",
+  "main": "build/index.js",
+  "scripts": {
+    "test": "tap --node-arg=-r --node-arg=@babel/register tests/*.js",
+    "test-some": "tap --node-arg=-r --node-arg=@babel/register",
+    "cover": "nyc --reporter=lcov npm test",
+    "lint": "eslint .",
+    "build": "babel src --out-dir build",
+    "prepublish": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:gas-buddy/gb-services.git/configured-elasticsearch-client.git"
+  },
+  "keywords": [
+    "swagger",
+    "rest",
+    "api",
+    "gasbuddy"
+  ],
+  "author": "GasBuddy",
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/cli": "^7.1.2",
+    "@babel/register": "^7.0.0",
+    "babel-preset-gasbuddy": "^4.1.1",
+    "eslint-config-gasbuddy": "^5.0.2",
+    "tap": "^12.0.1"
+  },
+  "dependencies": {
+    "query-string": "^6.4.2"
+  }
+}
