@@ -24,11 +24,11 @@
   "author": "GasBuddy",
   "license": "MIT",
   "devDependencies": {
-    "@babel/cli": "^7.1.2",
-    "@babel/register": "^7.0.0",
-    "babel-preset-gasbuddy": "^4.1.1",
-    "eslint-config-gasbuddy": "^5.0.2",
-    "tap": "^12.0.1"
+    "@babel/cli": "^7.4.3",
+    "@babel/register": "^7.4.0",
+    "babel-preset-gasbuddy": "^4.2.0",
+    "eslint-config-gasbuddy": "^5.1.0",
+    "tap": "^12.6.1"
   },
   "dependencies": {
     "query-string": "^6.4.2"
