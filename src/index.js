@@ -30,18 +30,33 @@ class ParameterBuilder {
    * @param {string|Array} value
    */
   query(name, value) {
-    this.parameters.query = this.parameters.query || {};
-    this.parameters.query[name] = value;
+    if (typeof value !== 'undefined') {
+      this.parameters.query = this.parameters.query || {};
+      this.parameters.query[name] = value;
+    }
     return this;
   }
 
-  body(json) {
+  /**
+   * Send a body parameter
+   * @param {any} _ Unused for body arguments, but provided to be consistent with other methods
+   * @param {*} json The object to be sent
+   */
+  body(_, json) {
     const p = this.parameters;
     p.headers = p.headers || {};
     if (!p.headers['content-type']) {
       p.headers['content-type'] = 'application/json';
     }
     p.body = JSON.stringify(json);
+    return this;
+  }
+
+  header(name, value) {
+    if (typeof value !== 'undefined') {
+      this.parameters.headers = this.parameters.headers || {};
+      this.parameters.headers[name.toLowerCase()] = value;
+    }
     return this;
   }
 
@@ -70,10 +85,10 @@ export function parameterBuilder(method, baseUrl, path) {
   return new ParameterBuilder(method, baseUrl, path);
 }
 
-export function fetchHelper(fetcher, request, options) {
-  const { fetch, requestInterceptor, responseInterceptor } = fetcher;
+export function fetchHelper(config, request, options) {
+  const { fetch, requestInterceptor, responseInterceptor } = config;
   if (typeof requestInterceptor === 'function') {
-    fetcher.requestInterceptor(request);
+    config.requestInterceptor(request);
   }
   if (options && typeof options.requestInterceptor === 'function') {
     options.requestInterceptor(request);
@@ -86,7 +101,7 @@ export function fetchHelper(fetcher, request, options) {
       const runAfterResponse = (body) => {
         const result = { request, status, headers, body };
         if (typeof responseInterceptor === 'function') {
-          fetcher.responseInterceptor(response, request);
+          config.responseInterceptor(response, request);
         }
         if (options && typeof options.responseInterceptor === 'function') {
           options.responseInterceptor(response, request);
@@ -100,3 +115,16 @@ export function fetchHelper(fetcher, request, options) {
       return response.blob().then(runAfterResponse);
     });
 }
+
+export function eventSourceHelper(config, request, options) {
+  const { EventSource, requestInterceptor } = config;
+  if (typeof requestInterceptor === 'function') {
+    config.requestInterceptor(request);
+  }
+  if (options && typeof options.requestInterceptor === 'function') {
+    options.requestInterceptor(request);
+  }
+  return new EventSource(request.url, request);
+}
+
+export { default as ReactNativeEventSource } from './RNEventSource';

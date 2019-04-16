@@ -14,7 +14,7 @@ tap.test('test_parameterBuilder', (tester) => {
     .query('hello', 'world')
     .query('goodbye', ['123', '%#$'])
     .path('tag', 'ba=#!@#z')
-    .body(bodyArgs)
+    .body('req', bodyArgs)
     .build();
 
   tester.strictEquals(params.url, 'http://restapi.com/foo/ba%3D%23!%40%23z/bar?goodbye=123&goodbye=%25%23%24&hello=world');
