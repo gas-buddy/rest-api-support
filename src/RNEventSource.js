@@ -26,7 +26,9 @@ export default class ReactNativeEventSource {
     }
   }
 
-  removeAllListeners = { message: [], error: [], end: [] };
+  removeAllListeners() {
+    this.message = { message: [], error: [], end: [] };
+  }
 
   dataAvailable(text) {
     const unparsed = text.substring(this.position);
