@@ -93,7 +93,11 @@ export function fetchHelper(config, request, options) {
   if (options && typeof options.requestInterceptor === 'function') {
     options.requestInterceptor(request);
   }
-  return fetch(request.url, request)
+
+  const placeholderError = new Error();
+  Error.captureStackTrace(placeholderError, fetchHelper);
+
+  const promise = fetch(request.url, request)
     .then((response) => {
       const { headers, status } = response;
       const contentType = response.headers.get('content-type').toLowerCase();
@@ -113,7 +117,27 @@ export function fetchHelper(config, request, options) {
         return response.json().then(runAfterResponse);
       }
       return response.blob().then(runAfterResponse);
+    })
+    .catch((error) => {
+      error.originalStack = placeholderError;
+      throw error;
     });
+  return Object.assign(promise, {
+    expect(...codes) {
+      return this.catch((error) => {
+        if (codes.includes(error.status)) {
+          return {
+            errObj: error,
+            response: error.response,
+            status: error.status,
+            statusCode: error.statusCode,
+            body: error.response && error.response.body,
+          };
+        }
+        throw error;
+      });
+    },
+  });
 }
 
 export function eventSourceHelper(config, request, options) {
