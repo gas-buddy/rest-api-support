@@ -85,13 +85,13 @@ export function parameterBuilder(method, baseUrl, path) {
   return new ParameterBuilder(method, baseUrl, path);
 }
 
-export function fetchHelper(config, request, options) {
+export async function fetchHelper(config, request, options) {
   const { fetch, requestInterceptor, responseInterceptor } = config;
   if (typeof requestInterceptor === 'function') {
-    config.requestInterceptor(request);
+    await config.requestInterceptor(request);
   }
   if (options && typeof options.requestInterceptor === 'function') {
-    options.requestInterceptor(request);
+    await options.requestInterceptor(request);
   }
 
   const placeholderError = new Error();
@@ -102,13 +102,13 @@ export function fetchHelper(config, request, options) {
       const { headers, status } = response;
       const contentType = response.headers.get('content-type').toLowerCase();
 
-      const runAfterResponse = (body) => {
+      const runAfterResponse = async (body) => {
         const result = { request, status, headers, body };
         if (typeof responseInterceptor === 'function') {
-          config.responseInterceptor(response, request);
+          await config.responseInterceptor(response, request);
         }
         if (options && typeof options.responseInterceptor === 'function') {
-          options.responseInterceptor(response, request);
+          await options.responseInterceptor(response, request);
         }
         return result;
       };
