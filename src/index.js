@@ -85,13 +85,13 @@ export function parameterBuilder(method, baseUrl, path) {
   return new ParameterBuilder(method, baseUrl, path);
 }
 
-export async function fetchHelper(config, request, options) {
+export async function fetchHelper(config, request, options, source) {
   const { fetch, requestInterceptor, responseInterceptor } = config;
   if (typeof requestInterceptor === 'function') {
-    await config.requestInterceptor(request);
+    await config.requestInterceptor(request, source);
   }
   if (options && typeof options.requestInterceptor === 'function') {
-    await options.requestInterceptor(request);
+    await options.requestInterceptor(request, source);
   }
 
   const placeholderError = new Error();
@@ -105,10 +105,10 @@ export async function fetchHelper(config, request, options) {
       const runAfterResponse = async (body) => {
         const result = { request, status, headers, body };
         if (typeof responseInterceptor === 'function') {
-          await config.responseInterceptor(response, request);
+          await config.responseInterceptor(response, request, source);
         }
         if (options && typeof options.responseInterceptor === 'function') {
-          await options.responseInterceptor(response, request);
+          await options.responseInterceptor(response, request, source);
         }
         return result;
       };
@@ -140,13 +140,13 @@ export async function fetchHelper(config, request, options) {
   });
 }
 
-export function eventSourceHelper(config, request, options) {
+export function eventSourceHelper(config, request, options, source) {
   const { EventSource, requestInterceptor } = config;
   if (typeof requestInterceptor === 'function') {
-    config.requestInterceptor(request);
+    config.requestInterceptor(request, source);
   }
   if (options && typeof options.requestInterceptor === 'function') {
-    options.requestInterceptor(request);
+    options.requestInterceptor(request, source);
   }
   return new EventSource(request.url, request);
 }
