@@ -85,22 +85,25 @@ export function parameterBuilder(method, baseUrl, path) {
   return new ParameterBuilder(method, baseUrl, path);
 }
 
-export async function fetchHelper(config, request, options, source) {
-  const { fetch, requestInterceptor, responseInterceptor } = config;
-  if (typeof requestInterceptor === 'function') {
-    await config.requestInterceptor(request, source);
-  }
-  if (options && typeof options.requestInterceptor === 'function') {
-    await options.requestInterceptor(request, source);
-  }
+export function fetchHelper(config, request, options, source) {
+  let promise = Promise.resolve();
 
   const placeholderError = new Error();
   Error.captureStackTrace(placeholderError, fetchHelper);
 
-  const promise = fetch(request.url, request)
+  const { fetch, requestInterceptor, responseInterceptor } = config;
+  if (typeof requestInterceptor === 'function') {
+    promise = promise.then(() => config.requestInterceptor(request, source));
+  }
+  if (options && typeof options.requestInterceptor === 'function') {
+    promise = promise.then(() => options.requestInterceptor(request, source));
+  }
+
+  promise = promise
+    .then(() => fetch(request.url, request))
     .then((response) => {
       const { headers, status } = response;
-      const contentType = response.headers.get('content-type').toLowerCase();
+      const contentType = response.headers.get('content-type')?.toLowerCase();
 
       const runAfterResponse = async (body) => {
         const result = { request, status, headers, body };
@@ -110,10 +113,15 @@ export async function fetchHelper(config, request, options, source) {
         if (options && typeof options.responseInterceptor === 'function') {
           await options.responseInterceptor(response, request, source);
         }
+        if (!options?.noHttpExceptions && (status < 200 || status > 299)) {
+          const error = new Error(result.body?.message || status);
+          Object.assign(error, result);
+          throw error;
+        }
         return result;
       };
 
-      if (contentType && contentType.includes('application/json')) {
+      if (contentType?.includes('application/json')) {
         return response.json().then(runAfterResponse);
       }
       return response.blob().then(runAfterResponse);
@@ -122,6 +130,7 @@ export async function fetchHelper(config, request, options, source) {
       error.originalStack = placeholderError;
       throw error;
     });
+
   return Object.assign(promise, {
     expect(...codes) {
       return this.catch((error) => {
