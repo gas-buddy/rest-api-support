@@ -89,7 +89,9 @@ export function fetchHelper(config, request, options, source) {
   let promise = Promise.resolve();
 
   const placeholderError = new Error();
-  Error.captureStackTrace(placeholderError, fetchHelper);
+  if (Error.captureStackTrace) {
+    Error.captureStackTrace(placeholderError, fetchHelper);
+  }
 
   const { fetch, requestInterceptor, responseInterceptor } = config;
   if (typeof requestInterceptor === 'function') {
