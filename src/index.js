@@ -15,8 +15,11 @@ class ParameterBuilder {
    */
   path(name, value) {
     // TODO more full featured type conversion
-    const urlValue = Array.isArray(value) ? value.join(',') : value;
-    const newUrl = this.parameters.url.replace(`{${name}}`, encodeURIComponent(urlValue || ''));
+    let urlValue = Array.isArray(value) ? value.join(',') : value;
+    if (urlValue === undefined || urlValue === null) {
+      urlValue = '';
+    }
+    const newUrl = this.parameters.url.replace(`{${name}}`, encodeURIComponent(urlValue));
     if (newUrl === this.parameters.url) {
       throw new Error(`Parameter ${name} is not a path parameter`);
     }
