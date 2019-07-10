@@ -1,12 +1,12 @@
 import qs from 'query-string';
 
 class ParameterBuilder {
-  constructor(method, baseUrl, path, options) {
+  constructor(method, baseUrl, path, config) {
     this.parameters = {
       method,
       url: `${baseUrl}${path}`,
     };
-    this.options = options;
+    this.config = config;
   }
 
   /**
@@ -59,7 +59,7 @@ class ParameterBuilder {
   formData(name, value) {
     const p = this.parameters;
     if (!p.body) {
-      p.body = new this.options.FormData();
+      p.body = new this.config.FormData();
     }
     p.body.append(name, value);
     return this;
@@ -94,8 +94,8 @@ class ParameterBuilder {
   }
 }
 
-export function parameterBuilder(method, baseUrl, path) {
-  return new ParameterBuilder(method, baseUrl, path);
+export function parameterBuilder(method, baseUrl, path, config, callOptions) {
+  return new ParameterBuilder(method, baseUrl, path, config, callOptions);
 }
 
 export function fetchHelper(config, request, options, source) {
