@@ -1,11 +1,12 @@
 import qs from 'query-string';
 
 class ParameterBuilder {
-  constructor(method, baseUrl, path) {
+  constructor(method, baseUrl, path, options) {
     this.parameters = {
       method,
       url: `${baseUrl}${path}`,
     };
+    this.options = options;
   }
 
   /**
@@ -52,6 +53,15 @@ class ParameterBuilder {
       p.headers['content-type'] = 'application/json';
     }
     p.body = JSON.stringify(json);
+    return this;
+  }
+
+  formData(name, value) {
+    const p = this.parameters;
+    if (!p.body) {
+      p.body = new this.options.FormData();
+    }
+    p.body.append(name, value);
     return this;
   }
 

@@ -1,6 +1,6 @@
 {
   "name": "rest-api-support",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "URL manipulation and other support infrastructure for making REST api calls",
   "main": "build/index.js",
   "scripts": {
@@ -24,15 +24,15 @@
   "author": "GasBuddy",
   "license": "MIT",
   "devDependencies": {
-    "@babel/cli": "^7.4.3",
-    "@babel/register": "^7.4.0",
-    "babel-preset-gasbuddy": "^4.2.0",
-    "eslint-config-gasbuddy": "^5.1.0",
+    "@babel/cli": "^7.5.0",
+    "@babel/register": "^7.4.4",
+    "babel-preset-gasbuddy": "^5.6.0",
+    "eslint-config-gasbuddy": "^5.3.0",
     "nock": "^10.0.6",
-    "node-fetch": "^2.3.0",
-    "tap": "^12.6.1"
+    "node-fetch": "^2.6.0",
+    "tap": "^14.4.1"
   },
   "dependencies": {
-    "query-string": "^6.4.2"
+    "query-string": "^6.8.1"
   }
 }
