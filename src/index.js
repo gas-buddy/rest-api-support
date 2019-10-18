@@ -155,7 +155,7 @@ export function fetchHelper(config, request, options, source) {
             response: error.response,
             status: error.status,
             statusCode: error.statusCode,
-            body: error.response && error.response.body,
+            body: error.response?.body || error.body,
           };
         }
         throw error;
