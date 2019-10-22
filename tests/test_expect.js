@@ -37,5 +37,18 @@ tap.test('test_expect', (tester) => {
       });
   });
 
+  tester.test('Retry', (test) => {
+    fetchHelper({ fetch }, { url: 'http://localhost:81/this-should-get-econnrefused', method: 'GET' })
+      .then(() => {
+        test.notOk(true, 'Should not complete');
+        test.end();
+      })
+      .catch((error) => {
+        test.strictEquals(error.retried, 3, 'Should have retried 3 times');
+        test.ok(true, 'Should eventually throw');
+        test.end();
+      });
+  });
+
   tester.end();
 });

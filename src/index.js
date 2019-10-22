@@ -1,5 +1,17 @@
 import qs from 'query-string';
 
+const RETRY_COUNTER = Symbol('Retry counter for network errors');
+
+async function autoRetry(request, error) {
+  const count = request[RETRY_COUNTER] || 0;
+  if (count < 3 && ['ECONNREFUSED', 'EAI_AGAIN'].includes(error.errno)) {
+    await new Promise(accept => setTimeout(accept, [50, 100, 250][count]));
+    request[RETRY_COUNTER] = count + 1;
+    return true;
+  }
+  return false;
+}
+
 class ParameterBuilder {
   constructor(method, baseUrl, path, config) {
     this.parameters = {
@@ -114,37 +126,50 @@ export function fetchHelper(config, request, options, source) {
     promise = promise.then(() => options.requestInterceptor(request, source));
   }
 
+  const responseHandler = (response) => {
+    const { headers, status } = response;
+    const contentType = response.headers.get('content-type')?.toLowerCase();
+
+    const runAfterResponse = async (body) => {
+      const result = { request, status, headers, body };
+      if (typeof responseInterceptor === 'function') {
+        await config.responseInterceptor(response, request, source);
+      }
+      if (options && typeof options.responseInterceptor === 'function') {
+        await options.responseInterceptor(response, request, source);
+      }
+      if (!options?.noHttpExceptions && (status < 200 || status > 299)) {
+        const error = new Error(result.body?.message || status);
+        Object.assign(error, result);
+        throw error;
+      }
+      return result;
+    };
+
+    if (contentType?.includes('application/json')) {
+      return response.json().then(runAfterResponse);
+    }
+    return response.blob().then(runAfterResponse);
+  };
+  const retryFn = (options && typeof options.shouldRetry === 'function') ? options.shouldRetry : autoRetry;
+  const errorHandler = async (error) => {
+    if (await retryFn(request, error)) {
+      if (options && typeof options.onRetry === 'function') {
+        options.onRetry(request, error);
+      }
+      return fetch(request.url, request).then(responseHandler).catch(errorHandler);
+    }
+    error.originalStack = placeholderError;
+    if (request[RETRY_COUNTER]) {
+      error.retried = request[RETRY_COUNTER];
+    }
+    throw error;
+  };
+
   promise = promise
     .then(() => fetch(request.url, request))
-    .then((response) => {
-      const { headers, status } = response;
-      const contentType = response.headers.get('content-type')?.toLowerCase();
-
-      const runAfterResponse = async (body) => {
-        const result = { request, status, headers, body };
-        if (typeof responseInterceptor === 'function') {
-          await config.responseInterceptor(response, request, source);
-        }
-        if (options && typeof options.responseInterceptor === 'function') {
-          await options.responseInterceptor(response, request, source);
-        }
-        if (!options?.noHttpExceptions && (status < 200 || status > 299)) {
-          const error = new Error(result.body?.message || status);
-          Object.assign(error, result);
-          throw error;
-        }
-        return result;
-      };
-
-      if (contentType?.includes('application/json')) {
-        return response.json().then(runAfterResponse);
-      }
-      return response.blob().then(runAfterResponse);
-    })
-    .catch((error) => {
-      error.originalStack = placeholderError;
-      throw error;
-    });
+    .then(responseHandler)
+    .catch(errorHandler);
 
   return Object.assign(promise, {
     expect(...codes) {
