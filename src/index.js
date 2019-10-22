@@ -157,6 +157,9 @@ export function fetchHelper(config, request, options, source) {
       if (options && typeof options.onRetry === 'function') {
         options.onRetry(request, error);
       }
+      if (typeof config.onRetry === 'function') {
+        config.onRetry(request, error);
+      }
       return fetch(request.url, request).then(responseHandler).catch(errorHandler);
     }
     error.originalStack = placeholderError;
