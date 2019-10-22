@@ -151,9 +151,12 @@ export function fetchHelper(config, request, options, source) {
     }
     return response.blob().then(runAfterResponse);
   };
-  const retryFn = typeof options?.shouldRetry === 'function' ? options.shouldRetry : autoRetry;
+  const retryFn = (options && typeof options.shouldRetry === 'function') ? options.shouldRetry : autoRetry;
   const errorHandler = async (error) => {
     if (await retryFn(request, error)) {
+      if (options && typeof options.onRetry === 'function') {
+        options.onRetry(request, error);
+      }
       return fetch(request.url, request).then(responseHandler).catch(errorHandler);
     }
     error.originalStack = placeholderError;
