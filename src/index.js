@@ -141,6 +141,10 @@ export function fetchHelper(config, request, options, source) {
       if (!options?.noHttpExceptions && (status < 200 || status > 299)) {
         const error = new Error(result.body?.message || status);
         Object.assign(error, result);
+        // Improve backwards compatibility
+        if (!Object.hasOwnProperty.call(error, 'response')) {
+          error.response = result;
+        }
         throw error;
       }
       return result;
