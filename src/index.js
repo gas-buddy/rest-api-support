@@ -172,10 +172,10 @@ export function fetchHelper(config, request, options, source) {
   };
   const retryFn = (options && typeof options.shouldRetry === 'function') ? options.shouldRetry : autoRetry;
   const errorHandler = async (error) => {
+    if (timer) {
+      clearTimeout(timer);
+    }
     if (await retryFn(request, error)) {
-      if (timer) {
-        clearTimeout(timer);
-      }
       if (options && typeof options.onRetry === 'function') {
         options.onRetry(request, error);
       }
@@ -186,8 +186,7 @@ export function fetchHelper(config, request, options, source) {
       timer = addTimeout(fetchRequest, AbortController, options?.timeout);
       return fetch(request.url, fetchRequest)
         .then(responseHandler)
-        .catch(errorHandler)
-        .finally(() => (timer && clearTimeout(timer)));
+        .catch(errorHandler);
     }
     error.originalStack = placeholderError;
     if (request[RETRY_COUNTER]) {
