@@ -12,6 +12,16 @@ async function autoRetry(request, error) {
   return false;
 }
 
+function addTimeout(request, AbortController, timeout) {
+  if (!AbortController || !timeout) {
+    return null;
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  request.signal = controller.signal;
+  return timer;
+}
+
 class ParameterBuilder {
   constructor(method, baseUrl, path, config) {
     this.parameters = {
@@ -118,7 +128,7 @@ export function fetchHelper(config, request, options, source) {
     Error.captureStackTrace(placeholderError, fetchHelper);
   }
 
-  const { fetch, requestInterceptor, responseInterceptor } = config;
+  const { fetch, AbortController, requestInterceptor, responseInterceptor } = config;
   if (typeof requestInterceptor === 'function') {
     promise = promise.then(() => config.requestInterceptor(request, source));
   }
@@ -126,7 +136,12 @@ export function fetchHelper(config, request, options, source) {
     promise = promise.then(() => options.requestInterceptor(request, source));
   }
 
+  let timer;
   const responseHandler = (response) => {
+    if (timer) {
+      clearTimeout(timer);
+    }
+
     const { headers, status } = response;
     const contentType = response.headers.get('content-type')?.toLowerCase();
 
@@ -158,13 +173,21 @@ export function fetchHelper(config, request, options, source) {
   const retryFn = (options && typeof options.shouldRetry === 'function') ? options.shouldRetry : autoRetry;
   const errorHandler = async (error) => {
     if (await retryFn(request, error)) {
+      if (timer) {
+        clearTimeout(timer);
+      }
       if (options && typeof options.onRetry === 'function') {
         options.onRetry(request, error);
       }
       if (typeof config.onRetry === 'function') {
         config.onRetry(request, error);
       }
-      return fetch(request.url, request).then(responseHandler).catch(errorHandler);
+      const fetchRequest = { ...request };
+      timer = addTimeout(fetchRequest, AbortController, options?.timeout);
+      return fetch(request.url, fetchRequest)
+        .then(responseHandler)
+        .catch(errorHandler)
+        .finally(() => (timer && clearTimeout(timer)));
     }
     error.originalStack = placeholderError;
     if (request[RETRY_COUNTER]) {
@@ -173,8 +196,10 @@ export function fetchHelper(config, request, options, source) {
     throw error;
   };
 
+  const fetchRequest = { ...request };
+  timer = addTimeout(fetchRequest, AbortController, options?.timeout);
   promise = promise
-    .then(() => fetch(request.url, request))
+    .then(() => fetch(request.url, fetchRequest))
     .then(responseHandler)
     .catch(errorHandler);
 
