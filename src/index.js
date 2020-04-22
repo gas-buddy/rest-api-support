@@ -128,7 +128,7 @@ export function fetchHelper(config, request, options, source) {
     Error.captureStackTrace(placeholderError, fetchHelper);
   }
 
-  const { fetch, AbortController, requestInterceptor, responseInterceptor } = config;
+  const { fetch, AbortController, requestInterceptor, responseInterceptor, timeout: configTimeout } = config;
   if (typeof requestInterceptor === 'function') {
     promise = promise.then(() => config.requestInterceptor(request, source));
   }
@@ -183,7 +183,7 @@ export function fetchHelper(config, request, options, source) {
         config.onRetry(request, error);
       }
       const fetchRequest = { ...request };
-      timer = addTimeout(fetchRequest, AbortController, options?.timeout);
+      timer = addTimeout(fetchRequest, AbortController, options?.timeout || configTimeout);
       return fetch(request.url, fetchRequest)
         .then(responseHandler)
         .catch(errorHandler);
@@ -196,7 +196,7 @@ export function fetchHelper(config, request, options, source) {
   };
 
   const fetchRequest = { ...request };
-  timer = addTimeout(fetchRequest, AbortController, options?.timeout);
+  timer = addTimeout(fetchRequest, AbortController, options?.timeout || configTimeout);
   promise = promise
     .then(() => fetch(request.url, fetchRequest))
     .then(responseHandler)

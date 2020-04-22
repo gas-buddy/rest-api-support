@@ -5,7 +5,7 @@ import AbortController from 'abort-controller';
 import { fetchHelper } from '../src/index';
 
 tap.test('test_timeout', (tester) => {
-  nock('http://httpbin.org').get('/timeout/1').delay({ head: 50 }).times(2)
+  nock('http://httpbin.org').get('/timeout/1').delay({ head: 50 }).times(3)
     .reply(200);
   nock('http://httpbin.org').get('/timeout/2').delay({ head: 50 })
     .reply(200);
@@ -14,6 +14,13 @@ tap.test('test_timeout', (tester) => {
 
   tester.test('Timeout should work', async (test) => {
     const result = await fetchHelper({ fetch, AbortController }, { url: 'http://httpbin.org/timeout/1', method: 'GET' }, { timeout: 10 })
+      .catch(e => e);
+    test.ok(result instanceof Error, 'Should return an error');
+    test.strictEquals(result.type, 'aborted', 'Should be an abort error');
+  });
+
+  tester.test('Timeout from config should work', async (test) => {
+    const result = await fetchHelper({ fetch, AbortController, timeout: 10 }, { url: 'http://httpbin.org/timeout/1', method: 'GET' })
       .catch(e => e);
     test.ok(result instanceof Error, 'Should return an error');
     test.strictEquals(result.type, 'aborted', 'Should be an abort error');
