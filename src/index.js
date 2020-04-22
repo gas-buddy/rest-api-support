@@ -195,10 +195,12 @@ export function fetchHelper(config, request, options, source) {
     throw error;
   };
 
-  const fetchRequest = { ...request };
-  timer = addTimeout(fetchRequest, AbortController, options?.timeout || configTimeout);
   promise = promise
-    .then(() => fetch(request.url, fetchRequest))
+    .then(() => {
+      const fetchRequest = { ...request };
+      timer = addTimeout(fetchRequest, AbortController, options?.timeout || configTimeout);
+      return fetch(request.url, fetchRequest);
+    })
     .then(responseHandler)
     .catch(errorHandler);
 
