@@ -99,14 +99,14 @@ export interface FetchConfig {
   baseUrl?: string;
 
   /**
-   * For timeout support
+   * For timeout support (This should return AbortController, but my Typescript-fu is not strong enough)
    */
-  AbortController: new () => AbortController;
+  AbortController: new () => any;
 
   /**
-   * For streaming requests
+   * For streaming requests (This should return EventSource, but my Typescript-fu is not strong enough)
    */
-  EventSource: new (url: string, init?: any) => EventSource;
+  EventSource: new (url: string, init?: any) => any;
 
   /**
    * For non-streaming requests
