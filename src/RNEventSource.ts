@@ -42,10 +42,10 @@ export default class ReactNativeEventSource {
 
   xhr: XMLHttpRequest;
 
-  constructor(url: string, options: EventSourceOptions) {
+  constructor(url: string, options?: EventSourceOptions) {
     const xhr = new XMLHttpRequest();
     this.origin = url;
-    xhr.open(options.method || 'GET', options.url, true);
+    xhr.open(options?.method || 'GET', url, true);
     xhr.setRequestHeader('Accept', 'text/event-stream');
     xhr.setRequestHeader('Cache-Control', 'no-cache'); // we must make use of this on the server side if we're working with Android - because they don't trigger
     if (options?.headers) {
@@ -53,7 +53,7 @@ export default class ReactNativeEventSource {
     }
     xhr.onreadystatechange = () => this.onReadyStateChange(xhr);
     xhr.onerror = () => this.onError(xhr);
-    xhr.send(options.body || null);
+    xhr.send(options?.body || null);
     this.xhr = xhr;
   }
 

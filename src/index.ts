@@ -6,8 +6,15 @@ export interface AbortController {
   signal: any;
 }
 
+interface EventSourceOptions {
+  method?: string;
+  body?: string;
+  url: string;
+  headers: {[key: string]: string};
+}
+
 export interface EventSource {
-  constructor(url: string, init?: any): this;
+  constructor(url: string, init?: EventSourceOptions): this;
   removeAllListeners(): this;
   addEventListener(name: string, handler: (data: any) => void): this;
   close(): this;
