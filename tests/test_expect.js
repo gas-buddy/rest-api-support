@@ -1,7 +1,7 @@
 import tap from 'tap';
 import nock from 'nock';
 import fetch from 'node-fetch';
-import { fetchHelper } from '../src/index';
+import { fetchHelper } from '../build/index';
 
 tap.test('test_expect', (tester) => {
   nock('http://httpbin.org')

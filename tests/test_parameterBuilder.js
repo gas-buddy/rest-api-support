@@ -1,5 +1,5 @@
 import tap from 'tap';
-import { parameterBuilder } from '../src/index';
+import { parameterBuilder } from '../build/index';
 
 tap.test('test_parameterBuilder', (tester) => {
   let params = parameterBuilder('GET', 'http://restapi.com', '/foo/bar')

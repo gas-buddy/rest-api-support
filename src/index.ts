@@ -1,18 +1,30 @@
 import qs from 'query-string';
+import type {
+  AbortController, FetchConfig, FetchRequest, FetchResponse, FetchPerRequestOptions, FetchError, InternalFetchResponse,
+} from './types';
 
 const RETRY_COUNTER = Symbol('Retry counter for network errors');
 
-async function autoRetry(request, error) {
-  const count = request[RETRY_COUNTER] || 0;
+interface FetchRequestPlus extends FetchRequest {
+  [RETRY_COUNTER]: number;
+}
+
+interface NodeErrorConstructor {
+  captureStackTrace?(targetObject: Object, constructorOpt?: Function): void;
+}
+
+async function autoRetry(request: FetchRequest, error: FetchError) {
+  const requestPlus = (request as FetchRequestPlus);
+  const count = requestPlus[RETRY_COUNTER] || 0;
   if (count < 3 && ['ECONNREFUSED', 'EAI_AGAIN'].includes(error.errno)) {
     await new Promise(accept => setTimeout(accept, [50, 100, 250][count]));
-    request[RETRY_COUNTER] = count + 1;
+    requestPlus[RETRY_COUNTER] = count + 1;
     return true;
   }
   return false;
 }
 
-function addTimeout(request, AbortController, timeout) {
+function addTimeout(request: FetchRequest, AbortController: new () => AbortController, timeout?: number) {
   if (!AbortController || !timeout) {
     return null;
   }
@@ -23,7 +35,11 @@ function addTimeout(request, AbortController, timeout) {
 }
 
 class ParameterBuilder {
-  constructor(method, baseUrl, path, config) {
+  parameters: {[key: string]: any};
+
+  config: {[key: string]: any};
+
+  constructor(method: string, baseUrl: string, path: string, config: FetchConfig) {
     this.parameters = {
       method,
       url: `${baseUrl}${path}`,
@@ -36,7 +52,7 @@ class ParameterBuilder {
    * @param {string} name The placeholder used in the URL
    * @param {string|Array} value The non-encoded value to be placed in the URL
    */
-  path(name, value) {
+  path(name: string, value: string | Array<string>) {
     // TODO more full featured type conversion
     let urlValue = Array.isArray(value) ? value.join(',') : value;
     if (urlValue === undefined || urlValue === null) {
@@ -55,7 +71,7 @@ class ParameterBuilder {
    * @param {string} name
    * @param {string|Array} value
    */
-  query(name, value) {
+  query(name: string, value: string) {
     if (typeof value !== 'undefined') {
       this.parameters.query = this.parameters.query || {};
       this.parameters.query[name] = value;
@@ -68,7 +84,7 @@ class ParameterBuilder {
    * @param {any} _ Unused for body arguments, but provided to be consistent with other methods
    * @param {*} json The object to be sent
    */
-  body(_, json) {
+  body(_: void, json: {[key: string]: any}) {
     const p = this.parameters;
     p.headers = p.headers || {};
     if (!p.headers['content-type']) {
@@ -78,7 +94,7 @@ class ParameterBuilder {
     return this;
   }
 
-  formData(name, value) {
+  formData(name: string, value: string) {
     const p = this.parameters;
     if (!p.body) {
       p.body = new this.config.FormData();
@@ -87,7 +103,7 @@ class ParameterBuilder {
     return this;
   }
 
-  header(name, value) {
+  header(name: string, value: string) {
     if (typeof value !== 'undefined') {
       this.parameters.headers = this.parameters.headers || {};
       this.parameters.headers[name.toLowerCase()] = value;
@@ -99,7 +115,7 @@ class ParameterBuilder {
    * Return the parameter details object
    */
   build() {
-    const final = {
+    const final: FetchRequest = {
       url: this.parameters.url,
       method: this.parameters.method,
     };
@@ -116,45 +132,45 @@ class ParameterBuilder {
   }
 }
 
-export function parameterBuilder(method, baseUrl, path, config, callOptions) {
-  return new ParameterBuilder(method, baseUrl, path, config, callOptions);
+export function parameterBuilder(method: string, baseUrl: string, path: string, config: FetchConfig) {
+  return new ParameterBuilder(method, baseUrl, path, config);
 }
 
-export function fetchHelper(config, request, options, source) {
+export function fetchHelper(config: FetchConfig, request: FetchRequest, options: FetchPerRequestOptions, source: string) {
   let promise = Promise.resolve();
 
   const placeholderError = new Error();
-  if (Error.captureStackTrace) {
-    Error.captureStackTrace(placeholderError, fetchHelper);
+  if ((<NodeErrorConstructor> Error).captureStackTrace) {
+    (<NodeErrorConstructor> Error).captureStackTrace?.(placeholderError, fetchHelper);
   }
 
   const { fetch, AbortController, requestInterceptor, responseInterceptor, timeout: configTimeout } = config;
   if (typeof requestInterceptor === 'function') {
-    promise = promise.then(() => config.requestInterceptor(request, source));
+    promise = promise.then(() => requestInterceptor(request, source));
   }
   if (options && typeof options.requestInterceptor === 'function') {
-    promise = promise.then(() => options.requestInterceptor(request, source));
+    promise = promise.then(() => options.requestInterceptor?.(request, source));
   }
 
-  let timer;
-  const responseHandler = (response) => {
+  let timer: any;
+  const responseHandler = (response: FetchResponse) => {
     if (timer) {
       clearTimeout(timer);
     }
 
     const { headers, status } = response;
-    const contentType = response.headers.get('content-type')?.toLowerCase();
+    const contentType = response.headers?.get('content-type')?.toLowerCase();
 
-    const runAfterResponse = async (body) => {
-      const result = { request, status, headers, body };
+    const runAfterResponse = async (body: any) => {
+      const result: FetchResponse = { request, status, statusCode: status, headers, body };
       if (typeof responseInterceptor === 'function') {
-        await config.responseInterceptor(response, request, source);
+        await responseInterceptor(response, request, source);
       }
       if (options && typeof options.responseInterceptor === 'function') {
         await options.responseInterceptor(response, request, source);
       }
       if (!options?.noHttpExceptions && (status < 200 || status > 299)) {
-        const error = new Error(result.body?.message || status);
+        const error: FetchError = <FetchError> new Error(result.body?.message || status);
         Object.assign(error, result);
         // Improve backwards compatibility
         if (!Object.hasOwnProperty.call(error, 'response')) {
@@ -166,18 +182,19 @@ export function fetchHelper(config, request, options, source) {
     };
 
     if (contentType?.includes('application/json')) {
-      return response.json().then(runAfterResponse);
+      return (<InternalFetchResponse>response).json().then(runAfterResponse);
     }
-    return response.blob().then(runAfterResponse);
+    return (<InternalFetchResponse>response).blob().then(runAfterResponse);
   };
   const retryFn = (options && typeof options.shouldRetry === 'function') ? options.shouldRetry : autoRetry;
-  const errorHandler = async (error) => {
+  const errorHandler = async (error: FetchError): Promise<FetchResponse> => {
     if (timer) {
       clearTimeout(timer);
     }
     if (await retryFn(request, error)) {
-      if (options && typeof options.onRetry === 'function') {
-        options.onRetry(request, error);
+      const { onRetry } = options || {};
+      if (typeof onRetry === 'function') {
+        onRetry(request, error);
       }
       if (typeof config.onRetry === 'function') {
         config.onRetry(request, error);
@@ -189,13 +206,13 @@ export function fetchHelper(config, request, options, source) {
         .catch(errorHandler);
     }
     error.originalStack = placeholderError;
-    if (request[RETRY_COUNTER]) {
-      error.retried = request[RETRY_COUNTER];
+    if ((<FetchRequestPlus>request)[RETRY_COUNTER]) {
+      error.retried = (<FetchRequestPlus>request)[RETRY_COUNTER];
     }
     throw error;
   };
 
-  promise = promise
+  const finalPromise = promise
     .then(() => {
       const fetchRequest = { ...request };
       timer = addTimeout(fetchRequest, AbortController, options?.timeout || configTimeout);
@@ -204,17 +221,20 @@ export function fetchHelper(config, request, options, source) {
     .then(responseHandler)
     .catch(errorHandler);
 
-  return Object.assign(promise, {
-    expect(...codes) {
-      return this.catch((error) => {
+  return Object.assign(finalPromise, {
+    expect(...codes: number[]) : Promise<FetchResponse> {
+      const fetchPromise = (<Promise<FetchResponse>>(<unknown>this));
+      return fetchPromise.catch((error: FetchError) => {
         if (codes.includes(error.status)) {
-          return {
+          const simulatedResponse: FetchResponse = {
             errObj: error,
+            request,
             response: error.response,
             status: error.status,
             statusCode: error.statusCode,
             body: error.response?.body || error.body,
           };
+          return simulatedResponse;
         }
         throw error;
       });
@@ -222,10 +242,10 @@ export function fetchHelper(config, request, options, source) {
   });
 }
 
-export function eventSourceHelper(config, request, options, source) {
+export function eventSourceHelper(config: FetchConfig, request: FetchRequest, options: FetchPerRequestOptions, source: string) {
   const { EventSource, requestInterceptor } = config;
   if (typeof requestInterceptor === 'function') {
-    config.requestInterceptor(request, source);
+    requestInterceptor(request, source);
   }
   if (options && typeof options.requestInterceptor === 'function') {
     options.requestInterceptor(request, source);
