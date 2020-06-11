@@ -40,6 +40,8 @@ export default class ReactNativeEventSource {
 
   origin: string;
 
+  xhr: XMLHttpRequest;
+
   constructor(url: string, options: EventSourceOptions) {
     const xhr = new XMLHttpRequest();
     this.origin = url;
@@ -52,6 +54,11 @@ export default class ReactNativeEventSource {
     xhr.onreadystatechange = () => this.onReadyStateChange(xhr);
     xhr.onerror = () => this.onError(xhr);
     xhr.send(options.body || null);
+    this.xhr = xhr;
+  }
+
+  close() {
+    this.xhr.abort();
   }
 
   addEventListener(event: 'message' | 'error' | 'close', callback: () => void) {
