@@ -1,12 +1,46 @@
 /* globals XMLHttpRequest */
+
+interface EventSourceOptions {
+  method?: string;
+  body?: string;
+  url: string;
+  headers: {[key: string]: string};
+}
+
+interface MessageFragment {
+  data: Array<string>;
+  id?: string;
+  eventType?: string;
+}
+
+interface FullMessage {
+  data: string;
+  origin: string;
+  lastEventId?: string;
+}
+
+interface Listeners {
+  message: Array<(message: FullMessage) => void>;
+  error: Array<(status: number, responseText: string) => void>;
+  close: Array<() => void>;
+}
+
 export default class ReactNativeEventSource {
   position = 0
 
-  listeners = { message: [], error: [], close: [] }
+  listeners: Listeners = {
+    message: [],
+    error: [],
+    close: [],
+  }
 
-  message = { data: [] }
+  message: MessageFragment = {
+    data: [],
+  }
 
-  constructor(url, options) {
+  origin: string;
+
+  constructor(url: string, options: EventSourceOptions) {
     const xhr = new XMLHttpRequest();
     this.origin = url;
     xhr.open(options.method || 'GET', options.url, true);
@@ -15,22 +49,22 @@ export default class ReactNativeEventSource {
     if (options?.headers) {
       Object.keys(options.headers).forEach(k => xhr.setRequestHeader(k, options.headers[k]));
     }
-    xhr.onreadystatechange = () => this.onReadyStateChange(xhr, options);
+    xhr.onreadystatechange = () => this.onReadyStateChange(xhr);
     xhr.onerror = () => this.onError(xhr);
     xhr.send(options.body || null);
   }
 
-  addEventListener(event, callback) {
+  addEventListener(event: 'message' | 'error' | 'close', callback: () => void) {
     if (this.listeners[event]) {
       this.listeners[event].push(callback);
     }
   }
 
   removeAllListeners() {
-    this.message = { message: [], error: [], end: [] };
+    this.listeners = { message: [], error: [], close: [] };
   }
 
-  dataAvailable(text) {
+  dataAvailable(text: string) {
     const unparsed = text.substring(this.position);
     const lines = unparsed.split('\n');
     for (let i = 0, len = lines.length; i < len; i += 1) {
@@ -66,11 +100,11 @@ export default class ReactNativeEventSource {
     }
   }
 
-  onError(xhr) {
+  onError(xhr: XMLHttpRequest) {
     this.listeners.error.forEach(cb => cb(xhr.status, xhr.responseText));
   }
 
-  onReadyStateChange(xhr) {
+  onReadyStateChange(xhr: XMLHttpRequest) {
     switch (xhr.readyState) {
       case 3:
         this.dataAvailable(xhr.responseText);

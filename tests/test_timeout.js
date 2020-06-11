@@ -2,7 +2,7 @@ import tap from 'tap';
 import nock from 'nock';
 import fetch from 'node-fetch';
 import AbortController from 'abort-controller';
-import { fetchHelper } from '../src/index';
+import { fetchHelper } from '../build/index';
 
 tap.test('test_timeout', (tester) => {
   nock('http://httpbin.org').get('/timeout/1').delay({ head: 50 }).times(3)
