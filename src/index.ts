@@ -24,6 +24,17 @@ export interface ResponseHeaders {
   get(header: string) : any;
 }
 
+export interface CommonFetchResponse {
+  status: number;
+  headers?: ResponseHeaders;
+}
+
+export interface SystemFetchResponse extends CommonFetchResponse {
+  // Tricky because it's not Buffer in the browser
+  blob(): Promise<any>;
+  json(): Promise<any>;
+}
+
 export interface FetchRequest {
   headers?: {[key: string]: string};
   body?: any;
@@ -32,29 +43,21 @@ export interface FetchRequest {
   signal?: any;
 }
 
-export interface FetchResponse {
+export interface RestApiSupportFetchResponse extends CommonFetchResponse {
   // For expected response codes which are presented as valid responses even though they generated errors
   errObj?: Error,
   // Only for expected error cases and I'm not even sure why it returns this
-  response?: FetchResponse;
+  response?: CommonFetchResponse;
   request: FetchRequest;
-  headers?: ResponseHeaders;
-  status: number;
   statusCode: number;
   body: any;
-}
-
-export interface InternalFetchResponse extends FetchResponse {
-  // Tricky because it's not Buffer in the browser
-  blob(): Promise<any>;
-  json(): Promise<any>;
 }
 
 export interface FetchError extends Error {
   errno: string;
   status: number;
   statusCode: number;
-  response: FetchResponse;
+  response: CommonFetchResponse;
   // Hoisted from response for backwards compatibility
   body?: any;
   // Stored at call time
@@ -67,7 +70,7 @@ export interface FetchPerRequestOptions {
   /**
    * Run before the request goes out with the parameters that will be used
    */
-  requestInterceptor?: (parameters: any, source?: string) => void;
+  requestInterceptor?: (parameters: FetchRequest, source?: string) => void;
 
   /**
    * Run after the request comes back
@@ -108,7 +111,7 @@ export interface FetchConfig {
   /**
    * For non-streaming requests
    */
-  fetch: (url: string, init?: any) => Promise<FetchResponse>;
+  fetch: (url: string, init?: any) => Promise<SystemFetchResponse>;
 
   /**
    * Run before the request goes out with the parameters that will be used
@@ -278,7 +281,7 @@ export function fetchHelper(config: FetchConfig, request: FetchRequest, options:
   }
 
   let timer: any;
-  const responseHandler = (response: FetchResponse) => {
+  const responseHandler = (response: SystemFetchResponse) => {
     if (timer) {
       clearTimeout(timer);
     }
@@ -287,7 +290,7 @@ export function fetchHelper(config: FetchConfig, request: FetchRequest, options:
     const contentType = response.headers?.get('content-type')?.toLowerCase();
 
     const runAfterResponse = async (body: any) => {
-      const result: FetchResponse = { request, status, statusCode: status, headers, body };
+      const result: RestApiSupportFetchResponse = { request, status, statusCode: status, headers, body };
       if (typeof responseInterceptor === 'function') {
         await responseInterceptor(response, request, source);
       }
@@ -299,7 +302,7 @@ export function fetchHelper(config: FetchConfig, request: FetchRequest, options:
         Object.assign(error, result);
         // Improve backwards compatibility
         if (!Object.hasOwnProperty.call(error, 'response')) {
-          error.response = result;
+          error.response = result as CommonFetchResponse;
         }
         throw error;
       }
@@ -307,12 +310,12 @@ export function fetchHelper(config: FetchConfig, request: FetchRequest, options:
     };
 
     if (contentType?.includes('application/json')) {
-      return (<InternalFetchResponse>response).json().then(runAfterResponse);
+      return response.json().then(runAfterResponse);
     }
-    return (<InternalFetchResponse>response).blob().then(runAfterResponse);
+    return response.blob().then(runAfterResponse);
   };
   const retryFn = (options && typeof options.shouldRetry === 'function') ? options.shouldRetry : autoRetry;
-  const errorHandler = async (error: FetchError): Promise<FetchResponse> => {
+  const errorHandler = async (error: FetchError): Promise<CommonFetchResponse> => {
     if (timer) {
       clearTimeout(timer);
     }
@@ -347,17 +350,17 @@ export function fetchHelper(config: FetchConfig, request: FetchRequest, options:
     .catch(errorHandler);
 
   return Object.assign(finalPromise, {
-    expect(...codes: number[]) : Promise<FetchResponse> {
-      const fetchPromise = (<Promise<FetchResponse>>(<unknown>this));
+    expect(...codes: number[]) : Promise<CommonFetchResponse> {
+      const fetchPromise = (<Promise<CommonFetchResponse>>(<unknown>this));
       return fetchPromise.catch((error: FetchError) => {
         if (codes.includes(error.status)) {
-          const simulatedResponse: FetchResponse = {
+          const simulatedResponse: RestApiSupportFetchResponse = {
             errObj: error,
             request,
             response: error.response,
             status: error.status,
             statusCode: error.statusCode,
-            body: error.response?.body || error.body,
+            body: (error.response as any)?.body || error.body,
           };
           return simulatedResponse;
         }

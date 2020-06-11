@@ -1,6 +1,6 @@
 {
   "name": "rest-api-support",
-  "version": "1.7.3",
+  "version": "1.7.4",
   "description": "URL manipulation and other support infrastructure for making REST api calls",
   "main": "build/index",
   "types": "build/index",
