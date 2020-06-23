@@ -118,6 +118,7 @@ export default class ReactNativeEventSource {
         break;
       case 4:
         this.dataAvailable(xhr.responseText);
+        this.listeners.close.forEach(cb => cb());
         break;
       case 2:
       default:
