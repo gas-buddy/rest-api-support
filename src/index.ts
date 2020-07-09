@@ -51,6 +51,7 @@ export interface RestApiSupportFetchResponse extends CommonFetchResponse {
   request: FetchRequest;
   statusCode: number;
   body: any;
+  responseType: 'response',
 }
 
 export interface FetchError extends Error {
@@ -64,6 +65,7 @@ export interface FetchError extends Error {
   originalStack: any;
   // Retry count
   retried?: number;
+  responseType: 'error',
 }
 
 export interface FetchPerRequestOptions {
@@ -269,7 +271,7 @@ export function fetchHelper(config: FetchConfig, request: FetchRequest, options:
 
   const placeholderError = new Error();
   if ((<NodeErrorConstructor> Error).captureStackTrace) {
-    (<NodeErrorConstructor> Error).captureStackTrace?.(placeholderError, fetchHelper);
+    (<NodeErrorConstructor> Error).captureStackTrace!(placeholderError, fetchHelper);
   }
 
   const { fetch, AbortController, requestInterceptor, responseInterceptor, timeout: configTimeout } = config;
@@ -290,7 +292,7 @@ export function fetchHelper(config: FetchConfig, request: FetchRequest, options:
     const contentType = response.headers?.get('content-type')?.toLowerCase();
 
     const runAfterResponse = async (body: any) => {
-      const result: RestApiSupportFetchResponse = { request, status, statusCode: status, headers, body };
+      const result: RestApiSupportFetchResponse = { request, status, statusCode: status, headers, body, responseType: 'response' };
       if (typeof responseInterceptor === 'function') {
         await responseInterceptor(response, request, source);
       }
@@ -299,7 +301,7 @@ export function fetchHelper(config: FetchConfig, request: FetchRequest, options:
       }
       if (!options?.noHttpExceptions && (status < 200 || status > 299)) {
         const error: FetchError = <FetchError> new Error(result.body?.message || status);
-        Object.assign(error, result);
+        Object.assign(error, result, { responseType: 'error' });
         // Improve backwards compatibility
         if (!Object.hasOwnProperty.call(error, 'response')) {
           error.response = result as CommonFetchResponse;
@@ -333,6 +335,7 @@ export function fetchHelper(config: FetchConfig, request: FetchRequest, options:
         .then(responseHandler)
         .catch(errorHandler);
     }
+    error.responseType = 'error';
     error.originalStack = placeholderError;
     if ((<FetchRequestPlus>request)[RETRY_COUNTER]) {
       error.retried = (<FetchRequestPlus>request)[RETRY_COUNTER];
@@ -351,7 +354,7 @@ export function fetchHelper(config: FetchConfig, request: FetchRequest, options:
 
   return Object.assign(finalPromise, {
     expect(...codes: number[]) : Promise<CommonFetchResponse> {
-      const fetchPromise = (<Promise<CommonFetchResponse>>(<unknown>this));
+      const fetchPromise = (<Promise<CommonFetchResponse>>(<unknown> this));
       return fetchPromise.catch((error: FetchError) => {
         if (codes.includes(error.status)) {
           const simulatedResponse: RestApiSupportFetchResponse = {
@@ -361,6 +364,7 @@ export function fetchHelper(config: FetchConfig, request: FetchRequest, options:
             status: error.status,
             statusCode: error.statusCode,
             body: (error.response as any)?.body || error.body,
+            responseType: 'response',
           };
           return simulatedResponse;
         }
