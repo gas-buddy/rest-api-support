@@ -77,7 +77,7 @@ export interface FetchPerRequestOptions {
   /**
    * Run after the request comes back
    */
-  responseInterceptor?: (response: any, parameters: any, source?: string) => void;
+  responseInterceptor?: (response: any, parameters: any, source?: string, result?: RestApiSupportFetchResponse) => void;
 
   /**
    * Catch exceptions and just return error responses instead - this can help normalize error handling
@@ -123,7 +123,7 @@ export interface FetchConfig {
   /**
    * Run after the request comes back
    */
-  responseInterceptor?: (response: any, parameters: any, source?: string) => void;
+  responseInterceptor?: (response: any, parameters: any, source?: string, result?: RestApiSupportFetchResponse) => void;
 
   /**
    * Default request timeout (msec)
@@ -294,10 +294,10 @@ export function fetchHelper(config: FetchConfig, request: FetchRequest, options:
     const runAfterResponse = async (body: any) => {
       const result: RestApiSupportFetchResponse = { request, status, statusCode: status, headers, body, responseType: 'response' };
       if (typeof responseInterceptor === 'function') {
-        await responseInterceptor(response, request, source);
+        await responseInterceptor(response, request, source, result);
       }
       if (options && typeof options.responseInterceptor === 'function') {
-        await options.responseInterceptor(response, request, source);
+        await options.responseInterceptor(response, request, source, result);
       }
       if (!options?.noHttpExceptions && (status < 200 || status > 299)) {
         const error: FetchError = <FetchError> new Error(result.body?.message || status);
