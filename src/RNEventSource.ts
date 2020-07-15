@@ -19,14 +19,21 @@ interface FullMessage {
   lastEventId?: string;
 }
 
+interface EventSourceError {
+  status: number;
+  response: string;
+}
+
 interface Listeners {
   message: Array<(message: FullMessage) => void>;
-  error: Array<(status: number, responseText: string) => void>;
+  error: Array<(errorInfo: EventSourceError) => void>;
   close: Array<() => void>;
 }
 
 export default class ReactNativeEventSource {
   position = 0
+
+  isError = false;
 
   listeners: Listeners = {
     message: [],
@@ -40,28 +47,35 @@ export default class ReactNativeEventSource {
 
   origin: string;
 
+  options?: EventSourceOptions;
+
   xhr: XMLHttpRequest;
 
   constructor(url: string, options?: EventSourceOptions) {
-    const xhr = new XMLHttpRequest();
     this.origin = url;
-    xhr.open(options?.method || 'GET', url, true);
+    this.options = options;
+    this.xhr = this.retry();
+  }
+
+  retry() {
+    const xhr = new XMLHttpRequest();
+    xhr.open(this.options?.method || 'GET', this.origin, true);
     xhr.setRequestHeader('Accept', 'text/event-stream');
     xhr.setRequestHeader('Cache-Control', 'no-cache'); // we must make use of this on the server side if we're working with Android - because they don't trigger
-    if (options?.headers) {
-      Object.keys(options.headers).forEach(k => xhr.setRequestHeader(k, options.headers[k]));
+    if (this.options?.headers) {
+      Object.keys(this.options.headers).forEach(k => xhr.setRequestHeader(k, this.options!.headers[k]));
     }
     xhr.onreadystatechange = () => this.onReadyStateChange(xhr);
     xhr.onerror = () => this.onError(xhr);
-    xhr.send(options?.body || null);
-    this.xhr = xhr;
+    xhr.send(this.options?.body || null);
+    return xhr;
   }
 
   close() {
     this.xhr.abort();
   }
 
-  addEventListener(event: 'message' | 'error' | 'close', callback: () => void) {
+  addEventListener(event: 'message' | 'error' | 'close', callback: (...args: any[]) => void) {
     if (this.listeners[event]) {
       this.listeners[event].push(callback);
     }
@@ -71,7 +85,15 @@ export default class ReactNativeEventSource {
     this.listeners = { message: [], error: [], close: [] };
   }
 
-  dataAvailable(text: string) {
+  dataAvailable(text: string, isFinal: boolean) {
+    if (this.isError) {
+      if (!isFinal) {
+        return;
+      }
+      this.listeners.error.forEach(cb => cb({ status: this.xhr.status, response: text }));
+      return;
+    }
+
     const unparsed = text.substring(this.position);
     const lines = unparsed.split('\n');
     for (let i = 0, len = lines.length; i < len; i += 1) {
@@ -108,19 +130,23 @@ export default class ReactNativeEventSource {
   }
 
   onError(xhr: XMLHttpRequest) {
-    this.listeners.error.forEach(cb => cb(xhr.status, xhr.responseText));
+    this.listeners.error.forEach(cb => cb({ status: xhr.status, response: xhr.responseText }));
   }
 
   onReadyStateChange(xhr: XMLHttpRequest) {
     switch (xhr.readyState) {
       case 3:
-        this.dataAvailable(xhr.responseText);
+        this.dataAvailable(xhr.responseText, false);
         break;
       case 4:
-        this.dataAvailable(xhr.responseText);
+        this.dataAvailable(xhr.responseText, true);
         this.listeners.close.forEach(cb => cb());
         break;
       case 2:
+        if (xhr.status < 200 || xhr.status > 299) {
+          this.isError = true;
+        }
+        break;
       default:
         break;
     }
