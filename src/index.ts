@@ -84,7 +84,12 @@ export interface FetchPerRequestOptions {
    */
   noHttpExceptions?: boolean;
 
-  shouldRetry?: (request: FetchRequest, error: Error) => boolean;
+  /**
+   * Whether a retry should be attempted for a particular request. The per-request
+   * version of this is run BEFORE the globally configured one. If that per-request
+   * shouldRetry exists, the globally configured one will not be called
+   */
+  shouldRetry?: (request: FetchRequest, error: Error, config: FetchConfig) => boolean | Promise<boolean>;
 
   onRetry?: (request: FetchRequest, error: Error) => void;
 
@@ -129,6 +134,13 @@ export interface FetchConfig {
    * Default request timeout (msec)
    */
   timeout?: number;
+
+  /**
+   * Whether a retry should be attempted for a particular request. The per-request
+   * version of this is run BEFORE the globally configured one. If that per-request
+   * shouldRetry exists, the globally configured one will not be called
+   */
+  shouldRetry?: (request: FetchRequest, error: Error, options: FetchPerRequestOptions) => boolean | Promise<boolean>;
 
   onRetry?: (request: FetchRequest, error: Error) => void;
 }
@@ -316,12 +328,19 @@ export function fetchHelper(config: FetchConfig, request: FetchRequest, options:
     }
     return response.blob().then(runAfterResponse);
   };
-  const retryFn = (options && typeof options.shouldRetry === 'function') ? options.shouldRetry : autoRetry;
+  const globalRetryFn = config.shouldRetry || autoRetry;
+  const retryFn = (options && typeof options.shouldRetry === 'function') ? options.shouldRetry : undefined;
   const errorHandler = async (error: FetchError): Promise<CommonFetchResponse> => {
     if (timer) {
       clearTimeout(timer);
     }
-    if (await retryFn(request, error)) {
+    let willRetry = false;
+    if (retryFn) {
+      willRetry = await retryFn(request, error, config);
+    } else {
+      willRetry = await globalRetryFn(request, error, options);
+    }
+    if (willRetry) {
       const { onRetry } = options || {};
       if (typeof onRetry === 'function') {
         onRetry(request, error);
