@@ -68,6 +68,28 @@ export interface FetchError extends Error {
   responseType: 'error',
 }
 
+export interface RestApiErrorBody {
+  code: string;
+  message: string;
+  domain: string;
+  // eslint-disable-next-line babel/camelcase
+  display_message?: string;
+}
+
+export interface RestApiSuccessResponse<T> {
+  responseType: 'response';
+  status: number;
+  headers: ResponseHeaders;
+  body: T;
+}
+
+export interface RestApiErrorResponse {
+  responseType: 'error';
+  body?: RestApiErrorBody;
+  status: number;
+  headers: ResponseHeaders;
+}
+
 export interface FetchPerRequestOptions {
   /**
    * Run before the request goes out with the parameters that will be used
