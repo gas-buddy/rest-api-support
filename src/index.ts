@@ -145,6 +145,15 @@ export interface FetchConfig {
   onRetry?: (request: FetchRequest, error: Error) => void;
 }
 
+export interface ServiceCallPromise<T> extends Promise<T>{
+  abort(): void;
+  /**
+   * Expect certain status codes and accept the promise rather than
+   * throwing
+   */
+  expect(...statusCodes: number[]) : ServiceCallPromise<T>;
+}
+
 const RETRY_COUNTER = Symbol('Retry counter for network errors');
 
 interface FetchRequestPlus extends FetchRequest {
@@ -166,14 +175,16 @@ async function autoRetry(request: FetchRequest, error: FetchError) {
   return false;
 }
 
-function addTimeout(request: FetchRequest, AbortController: new () => AbortController, timeout?: number) {
-  if (!AbortController || !timeout) {
-    return null;
+function addTimeout(
+  request: FetchRequest, AbortController: new () => AbortController, timeout?: number,
+): { timer?: any, abortController?: AbortController } {
+  if (!AbortController) {
+    return {};
   }
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeout);
-  request.signal = controller.signal;
-  return timer;
+  const abortController = new AbortController();
+  const timer = timeout ? setTimeout(() => abortController.abort(), timeout) : undefined;
+  request.signal = abortController.signal;
+  return { timer, abortController };
 }
 
 class ParameterBuilder {
@@ -278,7 +289,9 @@ export function parameterBuilder(method: string, baseUrl: string, path: string, 
   return new ParameterBuilder(method, baseUrl, path, config);
 }
 
-export function fetchHelper(config: FetchConfig, request: FetchRequest, options: FetchPerRequestOptions, source: string) {
+export function fetchHelper(
+  config: FetchConfig, request: FetchRequest, options: FetchPerRequestOptions, source: string,
+): ServiceCallPromise<CommonFetchResponse> {
   let promise = Promise.resolve();
 
   const placeholderError = new Error();
@@ -295,6 +308,8 @@ export function fetchHelper(config: FetchConfig, request: FetchRequest, options:
   }
 
   let timer: any;
+  let abortController: AbortController | undefined;
+
   const responseHandler = (response: SystemFetchResponse) => {
     if (timer) {
       clearTimeout(timer);
@@ -349,7 +364,7 @@ export function fetchHelper(config: FetchConfig, request: FetchRequest, options:
         config.onRetry(request, error);
       }
       const fetchRequest = { ...request };
-      timer = addTimeout(fetchRequest, AbortController, options?.timeout || configTimeout);
+      ({ timer, abortController } = addTimeout(fetchRequest, AbortController, options?.timeout || configTimeout));
       return fetch(request.url, fetchRequest)
         .then(responseHandler)
         .catch(errorHandler);
@@ -365,14 +380,17 @@ export function fetchHelper(config: FetchConfig, request: FetchRequest, options:
   const finalPromise = promise
     .then(() => {
       const fetchRequest = { ...request };
-      timer = addTimeout(fetchRequest, AbortController, options?.timeout || configTimeout);
+      ({ timer, abortController } = addTimeout(fetchRequest, AbortController, options?.timeout || configTimeout));
       return fetch(request.url, fetchRequest);
     })
     .then(responseHandler)
     .catch(errorHandler);
 
   return Object.assign(finalPromise, {
-    expect(...codes: number[]) : Promise<CommonFetchResponse> {
+    abort() {
+      abortController!.abort();
+    },
+    expect(...codes: number[]) : ServiceCallPromise<CommonFetchResponse> {
       const fetchPromise = (<Promise<CommonFetchResponse>>(<unknown> this));
       return fetchPromise.catch((error: FetchError) => {
         if (codes.includes(error.status)) {
@@ -388,7 +406,7 @@ export function fetchHelper(config: FetchConfig, request: FetchRequest, options:
           return simulatedResponse;
         }
         throw error;
-      });
+      }) as ServiceCallPromise<CommonFetchResponse>;
     },
   });
 }
