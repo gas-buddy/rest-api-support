@@ -138,6 +138,11 @@ export interface FetchConfig {
   EventSource: new (url: string, init?: any) => any;
 
   /**
+   * For multipart (e.g. file uploads)
+   */
+  FormData: new () => FormData;
+
+  /**
    * For non-streaming requests
    */
   fetch: (url: string, init?: any) => Promise<SystemFetchResponse>;
