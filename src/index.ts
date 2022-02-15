@@ -94,12 +94,12 @@ export interface FetchPerRequestOptions {
   /**
    * Run before the request goes out with the parameters that will be used
    */
-  requestInterceptor?: (parameters: FetchRequest, source?: string) => void;
+  requestInterceptor?: (parameters: FetchRequest, source?: string) => void | Promise<void>;
 
   /**
    * Run after the request comes back
    */
-  responseInterceptor?: (response: any, parameters: any, source?: string, result?: RestApiSupportFetchResponse) => void;
+  responseInterceptor?: (response: any, parameters: any, source?: string, result?: RestApiSupportFetchResponse) => void | Promise<void>;
 
   /**
    * Catch exceptions and just return error responses instead - this can help normalize error handling
@@ -150,12 +150,12 @@ export interface FetchConfig {
   /**
    * Run before the request goes out with the parameters that will be used
    */
-  requestInterceptor?: (parameters: any, source?: string) => void;
+  requestInterceptor?: (parameters: any, source?: string) => void | Promise<void>;
 
   /**
    * Run after the request comes back
    */
-  responseInterceptor?: (response: any, parameters: any, source?: string, result?: RestApiSupportFetchResponse) => void;
+  responseInterceptor?: (response: any, parameters: any, source?: string, result?: RestApiSupportFetchResponse) => void | Promise<void>;
 
   /**
    * Default request timeout (msec)
@@ -440,13 +440,14 @@ export function fetchHelper(
 
 export function eventSourceHelper(config: FetchConfig, request: FetchRequest, options: FetchPerRequestOptions, source: string) {
   const { EventSource, requestInterceptor } = config;
+  let promise = Promise.resolve();
   if (typeof requestInterceptor === 'function') {
-    requestInterceptor(request, source);
+    promise = promise.then(() => requestInterceptor(request, source));
   }
   if (options && typeof options.requestInterceptor === 'function') {
-    options.requestInterceptor(request, source);
+    promise = promise.then(() => options.requestInterceptor!(request, source));
   }
-  return new EventSource(request.url, request);
+  return promise.then(() => new EventSource(request.url, request));
 }
 
 export { default as ReactNativeEventSource } from './RNEventSource';
