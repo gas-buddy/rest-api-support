@@ -30,6 +30,9 @@ interface Listeners {
   close: Array<() => void>;
 }
 
+type GenericEvent = (...args: any[]) => void;
+type EventName = 'message' | 'error' | 'close';
+
 export default class ReactNativeEventSource {
   position = 0
 
@@ -75,7 +78,7 @@ export default class ReactNativeEventSource {
     this.xhr.abort();
   }
 
-  addEventListener(event: 'message' | 'error' | 'close', callback: (...args: any[]) => void) {
+  addEventListener(event: EventName, callback: GenericEvent) {
     if (this.listeners[event]) {
       this.listeners[event].push(callback);
     }
@@ -83,6 +86,12 @@ export default class ReactNativeEventSource {
 
   removeAllListeners() {
     this.listeners = { message: [], error: [], close: [] };
+  }
+
+  removeEventListener(event: EventName, listener: GenericEvent, options?: any) {
+    if (this.listeners[event]) {
+      this.listeners[event] = (this.listeners[event] as any[]).filter((cb: any) => cb !== listener);
+    }
   }
 
   dataAvailable(text: string, isFinal: boolean) {
