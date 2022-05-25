@@ -82,6 +82,7 @@ export default class ReactNativeEventSource {
     if (this.listeners[event]) {
       this.listeners[event].push(callback);
     }
+    return this;
   }
 
   removeAllListeners() {

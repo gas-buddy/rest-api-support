@@ -20,7 +20,7 @@ export interface EventSource {
   removeAllListeners(): void;
   removeEventListener(name: string, handler: (data: any) => void, options?: any): void;
   addEventListener(name: string, handler: (data: any) => void): this;
-  close(): this;
+  close(): void;
 }
 
 export interface ResponseHeaders {
