@@ -1,9 +1,13 @@
 import qs from 'query-string';
 
+export interface AbortSignal {
+  aborted: boolean;
+}
+
 export interface AbortController {
   constructor(): this;
   abort(): void;
-  signal: any;
+  signal: AbortSignal;
 }
 
 interface EventSourceOptions {
@@ -174,6 +178,7 @@ export interface FetchConfig {
 
 export interface ServiceCallPromise<T> extends Promise<T>{
   abort(): void;
+  isAborted(): boolean;
   /**
    * Expect certain status codes and accept the promise rather than
    * throwing
@@ -416,6 +421,9 @@ export function fetchHelper(
   return Object.assign(finalPromise, {
     abort() {
       abortController!.abort();
+    },
+    isAborted() {
+      return Boolean(abortController && abortController.signal.aborted);
     },
     expect(...codes: number[]) : ServiceCallPromise<CommonFetchResponse> {
       const fetchPromise = (<Promise<CommonFetchResponse>>(<unknown> this));
