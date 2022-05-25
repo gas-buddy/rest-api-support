@@ -123,6 +123,14 @@ export interface FetchPerRequestOptions {
    * Default request timeout (msec)
    */
   timeout?: number,
+
+  /**
+   * Sometimes it's easier to pass your own AbortController so that you can
+   * manage status and cancellation independent of our "promise infra." Since we may
+   * automatically retry in certain cases, you need to be able to handle multiple calls
+   * to this factory function per request, and return a new abort controller each time.
+   */
+  abortControllerFactory?: () => AbortController,
 }
 
 export interface FetchConfig {
@@ -211,12 +219,12 @@ async function autoRetry(request: FetchRequest, error: FetchError) {
 }
 
 function addTimeout(
-  request: FetchRequest, AbortController: new () => AbortController, timeout?: number,
+  request: FetchRequest, options: FetchPerRequestOptions | undefined, AbortController: new () => AbortController, timeout?: number,
 ): { timer?: any, abortController?: AbortController } {
-  if (!AbortController) {
+  if (!AbortController && !options?.abortControllerFactory) {
     return {};
   }
-  const abortController = new AbortController();
+  const abortController = options?.abortControllerFactory ? options.abortControllerFactory() : new AbortController();
   const timer = timeout ? setTimeout(() => abortController.abort(), timeout) : undefined;
   request.signal = abortController.signal;
   return { timer, abortController };
@@ -399,7 +407,7 @@ export function fetchHelper(
         config.onRetry(request, error);
       }
       const fetchRequest = { ...request };
-      ({ timer, abortController } = addTimeout(fetchRequest, AbortController, options?.timeout || configTimeout));
+      ({ timer, abortController } = addTimeout(fetchRequest, options, AbortController, options?.timeout || configTimeout));
       return fetch(request.url, fetchRequest)
         .then(responseHandler)
         .catch(errorHandler);
@@ -415,7 +423,7 @@ export function fetchHelper(
   const finalPromise = promise
     .then(() => {
       const fetchRequest = { ...request };
-      ({ timer, abortController } = addTimeout(fetchRequest, AbortController, options?.timeout || configTimeout));
+      ({ timer, abortController } = addTimeout(fetchRequest, options, AbortController, options?.timeout || configTimeout));
       return fetch(request.url, fetchRequest);
     })
     .then(responseHandler)
