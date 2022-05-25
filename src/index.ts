@@ -176,9 +176,12 @@ export interface FetchConfig {
   onRetry?: (request: FetchRequest, error: Error) => void;
 }
 
-export interface ServiceCallPromise<T> extends Promise<T>{
+export interface ServiceCallAborter {
   abort(): void;
   isAborted(): boolean;
+}
+
+export interface ServiceCallPromise<T> extends Promise<T>, ServiceCallAborter {
   /**
    * Expect certain status codes and accept the promise rather than
    * throwing
