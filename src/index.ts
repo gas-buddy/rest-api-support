@@ -5,7 +5,6 @@ export interface AbortSignal {
 }
 
 export interface AbortController {
-  constructor(): this;
   abort(): void;
   signal: AbortSignal;
 }
@@ -18,7 +17,6 @@ interface EventSourceOptions {
 }
 
 export interface EventSource {
-  constructor(url: string, init?: EventSourceOptions): this;
   removeAllListeners(): this;
   addEventListener(name: string, handler: (data: any) => void): this;
   close(): this;
@@ -140,14 +138,14 @@ export interface FetchConfig {
   baseUrl?: string;
 
   /**
-   * For timeout support (This should return AbortController, but my Typescript-fu is not strong enough)
+   * For timeout support
    */
-  AbortController: new () => any;
+  AbortController: new () => AbortController;
 
   /**
-   * For streaming requests (This should return EventSource, but my Typescript-fu is not strong enough)
+   * For streaming requests
    */
-  EventSource: new (url: string, init?: any) => any;
+  EventSource: new (url: string, init?: any) => EventSource;
 
   /**
    * For multipart (e.g. file uploads)
