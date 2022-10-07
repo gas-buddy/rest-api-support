@@ -6,23 +6,26 @@ import { fetchHelper } from '../build/index';
 tap.test('test_expect', (tester) => {
   nock('http://httpbin.org')
     .get('/status/404')
+    .twice()
     .reply(404);
 
   nock('http://httpbin.org')
     .get('/status/500')
     .reply(500, { bad: true });
 
-  tester.test('Use expects', (test) => {
+  tester.test('Use expects', async (test) => {
     const promise = fetchHelper({ fetch }, { url: 'http://httpbin.org/status/404', method: 'GET' });
     test.ok(promise.expect, 'Should have an expect method');
-    promise.expect(404).then(({ status, body }) => {
-      test.strictEquals(status, 404, 'Should catch the 404 when expected');
+    await promise.expect(404).then(({ status, body }) => {
+      test.equal(status, 404, 'Should catch the 404 when expected');
       test.ok(body, 'Should have a body on the error');
-      test.end();
     }).catch(() => {
       test.notOk(true, 'Should not throw when expected');
-      test.end();
     });
+
+    const { status, body } = await fetchHelper({ fetch }, { url: 'http://httpbin.org/status/404', method: 'GET' }, { expect: [404] });
+    test.equal(status, 404, 'Should catch the 404 when expected');
+    test.ok(body, 'Should have a body on the error');
   });
 
   tester.test('Throw', (test) => {
@@ -44,7 +47,7 @@ tap.test('test_expect', (tester) => {
         test.end();
       })
       .catch((error) => {
-        test.strictEquals(error.retried, 3, 'Should have retried 3 times');
+        test.equal(error.retried, 3, 'Should have retried 3 times');
         test.ok(true, 'Should eventually throw');
         test.end();
       });

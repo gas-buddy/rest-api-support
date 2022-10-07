@@ -130,6 +130,11 @@ export interface FetchPerRequestOptions {
    * to this factory function per request, and return a new abort controller each time.
    */
   abortControllerFactory?: () => AbortController,
+
+  /**
+   * Non-200 responses in this list will NOT cause an error to be thrown.
+   */
+  expect?: number[],
 }
 
 export interface FetchConfig {
@@ -192,6 +197,7 @@ export interface ServiceCallPromise<T> extends Promise<T>, ServiceCallAborter {
   /**
    * Expect certain status codes and accept the promise rather than
    * throwing
+   * @deprecated We now prefer that you pass expects: [...statusCodes] in the call options, it keeps the Promise more pure.
    */
   expect(...statusCodes: number[]) : ServiceCallPromise<T>;
 }
@@ -387,10 +393,24 @@ export function fetchHelper(
   };
   const globalRetryFn = config.shouldRetry || autoRetry;
   const retryFn = (options && typeof options.shouldRetry === 'function') ? options.shouldRetry : undefined;
+  const expects = options?.expect || [];
   const errorHandler = async (error: FetchError): Promise<CommonFetchResponse> => {
     if (timer) {
       clearTimeout(timer);
     }
+    if (expects.includes(error.statusCode)) {
+      const simulatedResponse: RestApiSupportFetchResponse = {
+        errObj: error,
+        request,
+        response: error.response,
+        status: error.status,
+        statusCode: error.statusCode,
+        body: (error.response as any)?.body || error.body,
+        responseType: 'response',
+      };
+      return simulatedResponse;
+    }
+
     let willRetry = false;
     if (retryFn) {
       willRetry = await retryFn(request, error, config);
@@ -436,22 +456,8 @@ export function fetchHelper(
       return Boolean(abortController && abortController.signal.aborted);
     },
     expect(...codes: number[]) : ServiceCallPromise<CommonFetchResponse> {
-      const fetchPromise = (<Promise<CommonFetchResponse>>(<unknown> this));
-      return fetchPromise.catch((error: FetchError) => {
-        if (codes.includes(error.status)) {
-          const simulatedResponse: RestApiSupportFetchResponse = {
-            errObj: error,
-            request,
-            response: error.response,
-            status: error.status,
-            statusCode: error.statusCode,
-            body: (error.response as any)?.body || error.body,
-            responseType: 'response',
-          };
-          return simulatedResponse;
-        }
-        throw error;
-      }) as ServiceCallPromise<CommonFetchResponse>;
+      expects.push(...codes);
+      return this as unknown as ServiceCallPromise<CommonFetchResponse>;
     },
   });
 }
