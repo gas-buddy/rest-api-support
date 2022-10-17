@@ -1,10 +1,15 @@
-import type { FetchConfig, FetchPerRequestOptions, FetchRequest } from './types/index';
+import type {
+  FetchConfig,
+  FetchPerRequestOptions,
+  FetchRequest,
+  RestApiCallSource,
+} from './types/index';
 
 export function eventSourceHelper(
   config: FetchConfig,
   request: FetchRequest,
   options: FetchPerRequestOptions,
-  source: string,
+  source?: RestApiCallSource,
 ) {
   const { EventSource, requestInterceptor } = config;
   let promise = Promise.resolve();

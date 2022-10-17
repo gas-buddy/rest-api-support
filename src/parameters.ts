@@ -19,7 +19,7 @@ class ParameterBuilder {
    * @param {string} name The placeholder used in the URL
    * @param {string|Array} value The non-encoded value to be placed in the URL
    */
-  path(name: string, value: string | Array<string>) {
+  path(name: string, value?: string | Array<string>) {
     // TODO more full featured type conversion
     let urlValue = Array.isArray(value) ? value.join(',') : value;
     if (urlValue === undefined || urlValue === null) {
@@ -38,7 +38,7 @@ class ParameterBuilder {
    * @param {string} name
    * @param {string|Array} value
    */
-  query(name: string, value: string | string[]) {
+  query(name: string, value?: string | string[]) {
     if (typeof value !== 'undefined') {
       this.parameters.query = this.parameters.query || {};
       this.parameters.query[name] = value;
@@ -70,7 +70,7 @@ class ParameterBuilder {
     return this;
   }
 
-  header(name: string, value: string) {
+  header(name: string, value?: string) {
     if (typeof value !== 'undefined') {
       this.parameters.headers = this.parameters.headers || {};
       this.parameters.headers[name.toLowerCase()] = value;

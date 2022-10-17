@@ -7,6 +7,7 @@ import type {
   FetchError,
   FetchPerRequestOptions,
   FetchRequest,
+  RestApiCallSource,
   RestApiSupportFetchResponse,
   SystemFetchResponse,
 } from './types/index';
@@ -15,12 +16,12 @@ interface NodeErrorConstructor {
   captureStackTrace?(targetObject: Object, constructorOpt?: Function): void;
 }
 
-export function fetchHelper(
+export function fetchHelper<T, R = any>(
   config: FetchConfig,
   request: FetchRequest,
   options?: FetchPerRequestOptions,
-  source?: string,
-): Promise<CommonFetchResponse> {
+  source?: RestApiCallSource<R>,
+): Promise<RestApiSupportFetchResponse<T>> {
   let promise = Promise.resolve();
 
   const placeholderError = new Error();
@@ -161,5 +162,5 @@ export function fetchHelper(
       expects.push(...codes);
       return this as unknown as Promise<CommonFetchResponse>;
     },
-  });
+  }) as Promise<RestApiSupportFetchResponse<T>>;
 }

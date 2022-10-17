@@ -37,7 +37,8 @@ export interface FetchRequest {
   signal?: any;
 }
 
-export interface RestApiSupportFetchResponse extends CommonFetchResponse {
+export interface RestApiSupportFetchResponse<T = any> extends CommonFetchResponse {
+  responseType: 'response';
   // For expected response codes which are presented as valid responses
   // even though they generated errors
   errObj?: Error;
@@ -45,8 +46,7 @@ export interface RestApiSupportFetchResponse extends CommonFetchResponse {
   response?: CommonFetchResponse;
   request: FetchRequest;
   statusCode: number;
-  body: any;
-  responseType: 'response';
+  body: T;
 }
 
 export interface FetchError extends Error {
@@ -70,32 +70,33 @@ export interface RestApiErrorBody {
   display_message?: string;
 }
 
-export interface RestApiSuccessResponse<T> {
+export interface RestApiSuccessResponse<T> extends CommonFetchResponse {
   responseType: 'response';
-  status: number;
-  headers: ResponseHeaders;
   body: T;
 }
 
-export interface RestApiResponse<S extends number, T> {
+export interface RestApiResponse<S extends number, T> extends CommonFetchResponse {
   responseType: 'response';
   status: S;
-  headers: ResponseHeaders;
   body: T;
 }
 
-export interface RestApiErrorResponse {
-  responseType: 'error';
-  body?: RestApiErrorBody;
-  status: number;
-  headers: ResponseHeaders;
+export interface RestApiCallSource<R = any> {
+  method: string;
+  client: string;
+  arguments?: R;
 }
 
-export interface FetchPerRequestOptions {
+export type RestApiErrorResponse<S extends number = any> = RestApiResponse<S, RestApiErrorBody>;
+
+export interface FetchPerRequestOptions<R = any> {
   /**
    * Run before the request goes out with the parameters that will be used
    */
-  requestInterceptor?: (parameters: FetchRequest, source?: string) => void | Promise<void>;
+  requestInterceptor?: (
+    parameters: FetchRequest,
+    source?: RestApiCallSource<R>,
+  ) => void | Promise<void>;
 
   /**
    * Run after the request comes back
@@ -103,7 +104,7 @@ export interface FetchPerRequestOptions {
   responseInterceptor?: (
     response: any,
     parameters: any,
-    source?: string,
+    source?: RestApiCallSource<R>,
     result?: RestApiSupportFetchResponse,
   ) => void | Promise<void>;
 
@@ -174,7 +175,7 @@ export interface FetchConfig {
   /**
    * Run before the request goes out with the parameters that will be used
    */
-  requestInterceptor?: (parameters: any, source?: string) => void | Promise<void>;
+  requestInterceptor?: (parameters: any, source?: RestApiCallSource<any>) => void | Promise<void>;
 
   /**
    * Run after the request comes back
@@ -182,7 +183,7 @@ export interface FetchConfig {
   responseInterceptor?: (
     response: any,
     parameters: any,
-    source?: string,
+    source?: RestApiCallSource<any>,
     result?: RestApiSupportFetchResponse,
   ) => void | Promise<void>;
 
