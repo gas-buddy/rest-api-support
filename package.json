@@ -1,5 +1,5 @@
 {
-  "name": "@gasbuddy/rest-api-support",
+  "name": "rest-api-support",
   "version": "1.15.0",
   "description": "URL manipulation and other support infrastructure for making REST api calls",
   "main": "build/index.js",
