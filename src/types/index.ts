@@ -76,7 +76,7 @@ export interface RestApiSuccessResponse<T> extends CommonFetchResponse {
 }
 
 export interface RestApiResponse<S extends number, T> extends CommonFetchResponse {
-  responseType: 'response';
+  responseType: 'response' | 'error';
   status: S;
   body: T;
 }
@@ -87,7 +87,10 @@ export interface RestApiCallSource<R = any> {
   arguments?: R;
 }
 
-export type RestApiErrorResponse<S extends number = any> = RestApiResponse<S, RestApiErrorBody>;
+export interface RestApiErrorResponse<S extends number = any>
+  extends RestApiResponse<S, RestApiErrorBody> {
+  responseType: 'error';
+}
 
 export interface FetchPerRequestOptions<R = any> {
   /**
@@ -297,5 +300,5 @@ export interface ServiceCallPromise<T> extends Promise<T>, ServiceCallAborter {
    * @deprecated We now prefer that you pass expects: [...statusCodes] in the call options,
    * it keeps the Promise more pure.
    */
-  expect(...statusCodes: number[]) : ServiceCallPromise<T>;
+  expect(...statusCodes: number[]): ServiceCallPromise<T>;
 }
