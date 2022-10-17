@@ -2,8 +2,8 @@
 .transpiled
 .nyc_output
 
-# Wercker
-.wercker
+# TypeScript incremental compilation cache
+*.tsbuildinfo
 
 # Stock
 *.seed
@@ -16,7 +16,7 @@
 *.orig
 
 work
-build
+/build
 pids
 logs
 results
@@ -42,3 +42,15 @@ Thumbs.db
 .LSOverride
 .Spotlight-V100
 .Trashes
+
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+.node_repl_history
+
+# TypeScript incremental compilation cache
+*.tsbuildinfo

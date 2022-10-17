@@ -1,7 +1,0 @@
-{
-  "presets": [
-    "gasbuddy",
-    "@babel/preset-typescript"
-  ],
-  "sourceMaps": true
-}

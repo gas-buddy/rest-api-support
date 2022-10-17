@@ -1,6 +1,8 @@
 rest-api-support
-================
+===============
 
-URL manipulation and other support infrastructure for making REST api calls, typically via OpenAPI/Swagger.
-This is primarily used by [small-swagger-codegen](https://github.com/gas-buddy/small-swagger-codegen) for
-Javascript code.
+![main CI](https://github.com/gas-buddy/rest-api-support/actions/workflows/nodejs.yml/badge.svg)
+
+[![npm version](https://badge.fury.io/js/@gasbuddy%2Frest-api-support.svg)](https://badge.fury.io/js/@gasbuddy%2Frest-api-support)
+
+URL manipulation and other support infrastructure for making REST api calls

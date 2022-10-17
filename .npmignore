@@ -1,9 +1,9 @@
+# npmignore should match gitignore, except for the /build directory
 # Custom
 .transpiled
 .nyc_output
-
-# Wercker
-.wercker
+.yarnrc.yml
+.yarn
 
 # Stock
 *.seed

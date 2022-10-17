@@ -4,7 +4,7 @@ interface EventSourceOptions {
   method?: string;
   body?: string;
   url: string;
-  headers: {[key: string]: string};
+  headers: { [key: string]: string };
 }
 
 interface MessageFragment {
@@ -33,8 +33,8 @@ interface Listeners {
 type GenericEvent = (...args: any[]) => void;
 type EventName = 'message' | 'error' | 'close';
 
-export default class ReactNativeEventSource {
-  position = 0
+export class ReactNativeEventSource {
+  position = 0;
 
   isError = false;
 
@@ -42,11 +42,11 @@ export default class ReactNativeEventSource {
     message: [],
     error: [],
     close: [],
-  }
+  };
 
   message: MessageFragment = {
     data: [],
-  }
+  };
 
   origin: string;
 
@@ -66,7 +66,8 @@ export default class ReactNativeEventSource {
     xhr.setRequestHeader('Accept', 'text/event-stream');
     xhr.setRequestHeader('Cache-Control', 'no-cache'); // we must make use of this on the server side if we're working with Android - because they don't trigger
     if (this.options?.headers) {
-      Object.keys(this.options.headers).forEach(k => xhr.setRequestHeader(k, this.options!.headers[k]));
+      Object.keys(this.options.headers)
+        .forEach((k) => xhr.setRequestHeader(k, this.options!.headers[k]));
     }
     xhr.onreadystatechange = () => this.onReadyStateChange(xhr);
     xhr.onerror = () => this.onError(xhr);
@@ -89,6 +90,7 @@ export default class ReactNativeEventSource {
     this.listeners = { message: [], error: [], close: [] };
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   removeEventListener(event: EventName, listener: GenericEvent, options?: any) {
     if (this.listeners[event]) {
       this.listeners[event] = (this.listeners[event] as any[]).filter((cb: any) => cb !== listener);
@@ -100,7 +102,7 @@ export default class ReactNativeEventSource {
       if (!isFinal) {
         return;
       }
-      this.listeners.error.forEach(cb => cb({ status: this.xhr.status, response: text }));
+      this.listeners.error.forEach((cb) => cb({ status: this.xhr.status, response: text }));
       return;
     }
 
@@ -131,7 +133,7 @@ export default class ReactNativeEventSource {
             origin: this.origin,
             lastEventId: this.message.id,
           };
-          this.listeners.message.forEach(cb => cb(message));
+          this.listeners.message.forEach((cb) => cb(message));
         }
         this.message = { data: [] };
         this.position += 1;
@@ -140,7 +142,7 @@ export default class ReactNativeEventSource {
   }
 
   onError(xhr: XMLHttpRequest) {
-    this.listeners.error.forEach(cb => cb({ status: xhr.status, response: xhr.responseText }));
+    this.listeners.error.forEach((cb) => cb({ status: xhr.status, response: xhr.responseText }));
   }
 
   onReadyStateChange(xhr: XMLHttpRequest) {
@@ -150,7 +152,7 @@ export default class ReactNativeEventSource {
         break;
       case 4:
         this.dataAvailable(xhr.responseText, true);
-        this.listeners.close.forEach(cb => cb());
+        this.listeners.close.forEach((cb) => cb());
         break;
       case 2:
         if (xhr.status < 200 || xhr.status > 299) {

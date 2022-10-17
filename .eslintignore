@@ -1,3 +1,5 @@
 build/
-# Wercker
-.wercker
+coverage
+jest.config.js
+.eslintrc.js
+src/generated
