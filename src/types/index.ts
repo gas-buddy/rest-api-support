@@ -277,3 +277,24 @@ export type ValidHTTPResponseCodes =
   | 525
   | 598
   | 599;
+
+/**
+ * @deprecated Pass in an AbortController factory and use it directly
+ */
+export interface ServiceCallAborter {
+  abort(): void;
+  isAborted(): boolean;
+}
+
+/**
+ * @deprecated Do not use specialized promises anymore
+ */
+export interface ServiceCallPromise<T> extends Promise<T>, ServiceCallAborter {
+  /**
+   * Expect certain status codes and accept the promise rather than
+   * throwing
+   * @deprecated We now prefer that you pass expects: [...statusCodes] in the call options,
+   * it keeps the Promise more pure.
+   */
+  expect(...statusCodes: number[]) : ServiceCallPromise<T>;
+}
