@@ -1,3 +1,4 @@
+import nock from 'nock';
 import fetch from 'node-fetch';
 import AbortController from 'abort-controller';
 import { fetchHelper, FetchConfig } from '../src/index';
@@ -5,9 +6,11 @@ import { fetchHelper, FetchConfig } from '../src/index';
 const delay = (ms: number) => new Promise((resolve) => { setTimeout(resolve, ms); });
 
 describe('abort', () => {
-  const mockedFetch = jest.fn<Promise<any>, Parameters<typeof fetch>>();
-  jest.mock('node-fetch', () => mockedFetch);
-  mockedFetch.mockImplementation(() => delay(800).then(() => ({ status: 200 })));
+  nock('http://httpbin.org')
+    .get('/status/200')
+    .times(2)
+    .delay(300)
+    .reply(200);
 
   test('Signal works', async () => {
     const resultPromise = fetchHelper(

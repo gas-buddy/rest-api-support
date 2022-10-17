@@ -446,7 +446,6 @@ __metadata:
     husky: ^8.0.1
     jest: ^29.1.2
     jest-openapi: ^0.14.2
-    jest-when: ^3.5.1
     lint-staged: ^13.0.3
     nock: ^13.2.9
     node-fetch: ^2.0.0
@@ -3799,15 +3798,6 @@ __metadata:
     jest-util: ^29.2.0
     string-length: ^4.0.1
   checksum: 86a0a79edcfab8ac96eddafad55327f8d8f0367d75506af8130fcd42c301189ecb3a0749e5739e8336e9478c2df5419ac73fca2bdb6c4180ed85896f01917697
-  languageName: node
-  linkType: hard
-
-"jest-when@npm:^3.5.1":
-  version: 3.5.1
-  resolution: "jest-when@npm:3.5.1"
-  peerDependencies:
-    jest: ">= 25"
-  checksum: 1efb9f497f7c846fe8b0f4125d5f449c4a4d78d5d0afa910d134b301ae4c119ea52c9465db38d2146269d42808afe8f3a4328d1d656878a9a69458ee653f6499
   languageName: node
   linkType: hard
 

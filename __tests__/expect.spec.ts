@@ -1,20 +1,19 @@
+import nock from 'nock';
 import fetch from 'node-fetch';
-import { when } from 'jest-when';
 import { fetchHelper, FetchConfig } from '../src/index';
 
 describe('expect', () => {
   const mockFetch = jest.fn();
   jest.mock('node-fetch', () => mockFetch);
 
-  when(mockFetch).calledWith('http://httpbin.org/status/404').mockResolvedValue({
-    status: 404,
-  });
-  when(mockFetch)
-    .calledWith('http://httpbin.org/status/500')
-    .mockResolvedValue({
-      status: 500,
-      body: { bad: true },
-    });
+  nock('http://httpbin.org')
+    .get('/status/404')
+    .twice()
+    .reply(404);
+
+  nock('http://httpbin.org')
+    .get('/status/500')
+    .reply(500, { bad: true });
 
   test('Use expects', async () => {
     const promise = fetchHelper({ fetch } as unknown as FetchConfig, {
