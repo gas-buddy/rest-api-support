@@ -1,6 +1,7 @@
 # Custom
 .transpiled
 .nyc_output
+.eslintcache
 
 # TypeScript incremental compilation cache
 *.tsbuildinfo
