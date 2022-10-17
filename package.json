@@ -43,8 +43,6 @@
     "typescript": "^4.8.4"
   },
   "dependencies": {
-    "@gasbuddy/gb-services": "^22.3.0",
-    "@gasbuddy/service": "^11.14.1",
     "query-string": "^7.1.1"
   },
   "packageManager": "yarn@3.2.4"
