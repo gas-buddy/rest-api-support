@@ -17,7 +17,7 @@ describe('abort', () => {
       { fetch, AbortController } as unknown as FetchConfig,
       { url: 'http://httpbin.org/status/200', method: 'GET' },
       {},
-      'test',
+      { client: 'test', method: 'status' },
     );
     const deprecatedPromise = resultPromise as any;
 
@@ -43,7 +43,7 @@ describe('abort', () => {
       { fetch, AbortController } as unknown as FetchConfig,
       { url: 'http://httpbin.org/status/200', method: 'GET' },
       { abortControllerFactory, timeout: 100 },
-      'test',
+      { client: 'test', method: 'status' },
     );
     await delay(50);
     expect(count).toEqual(1); // Should have created one abort controller
