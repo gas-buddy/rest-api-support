@@ -17,9 +17,9 @@ class ParameterBuilder {
   /**
    * Set a path parameter
    * @param {string} name The placeholder used in the URL
-   * @param {string|Array} value The non-encoded value to be placed in the URL
+   * @param {string|number|Array} value The non-encoded value to be placed in the URL
    */
-  path(name: string, value?: string | Array<string>) {
+  path(name: string, value?: string | number | Array<string>) {
     // TODO more full featured type conversion
     let urlValue = Array.isArray(value) ? value.join(',') : value;
     if (urlValue === undefined || urlValue === null) {
@@ -61,12 +61,19 @@ class ParameterBuilder {
     return this;
   }
 
-  formData(name: string, value: string) {
+  formData(name: string, value: string | number | Buffer | Array<string> | Array<Buffer>) {
     const p = this.parameters;
     if (!p.body) {
       p.body = new this.config.FormData();
     }
-    p.body.append(name, value);
+
+    // For arrays, stringify them
+    if (Array.isArray(value)) {
+      p.body.append(name, JSON.stringify(value));
+    } else {
+      p.body.append(name, value);
+    }
+
     return this;
   }
 
