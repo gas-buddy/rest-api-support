@@ -26,6 +26,20 @@ test('parameters', () => {
 
   expect(numParams.url).toEqual('http://restapi.com/pets/123');
 
+  // Test with numeric query parameter
+  const numQuery = parameterBuilder('GET', 'http://restapi.com', '/search', config)
+    .query('limit', 50)
+    .build();
+
+  expect(numQuery.url).toEqual('http://restapi.com/search?limit=50');
+
+  // Test with boolean query parameter
+  const boolQuery = parameterBuilder('GET', 'http://restapi.com', '/items', config)
+    .query('available', true)
+    .build();
+
+  expect(boolQuery.url).toEqual('http://restapi.com/items?available=true');
+
   expect(params.url).toEqual('http://restapi.com/foo/ba%3D%23!%40%23z/bar?goodbye=123&goodbye=%25%23%24&hello=world');
   expect(params.body).toEqual(JSON.stringify(bodyArgs));
   expect(params.headers?.['content-type']).toEqual('application/json');
@@ -79,6 +93,14 @@ test('formData parameters', () => {
     .build();
 
   expect(formDataAppendSpy).toHaveBeenCalledWith('tags', JSON.stringify(stringArray));
+
+  // Test with boolean value
+  formDataAppendSpy.mockClear();
+  parameterBuilder('POST', 'http://restapi.com', '/upload', config)
+    .formData('is_public', true)
+    .build();
+
+  expect(formDataAppendSpy).toHaveBeenCalledWith('is_public', true);
 
   // Clean up
   formDataAppendSpy.mockRestore();

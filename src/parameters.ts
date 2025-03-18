@@ -38,7 +38,7 @@ class ParameterBuilder {
    * @param {string} name
    * @param {string|Array} value
    */
-  query(name: string, value?: string | string[]) {
+  query(name: string, value?: string | number | boolean | string[]) {
     if (typeof value !== 'undefined') {
       this.parameters.query = this.parameters.query || {};
       this.parameters.query[name] = value;
@@ -61,7 +61,10 @@ class ParameterBuilder {
     return this;
   }
 
-  formData(name: string, value: string | number | Buffer | Array<string> | Array<Buffer>) {
+  formData(
+    name: string,
+    value: string | number | boolean | Buffer | Array<string> | Array<Buffer>,
+  ) {
     const p = this.parameters;
     if (!p.body) {
       p.body = new this.config.FormData();
