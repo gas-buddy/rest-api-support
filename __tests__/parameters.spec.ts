@@ -102,6 +102,21 @@ test('formData parameters', () => {
 
   expect(formDataAppendSpy).toHaveBeenCalledWith('is_public', true);
 
+  // Test with Buffer value and options (like image upload)
+  formDataAppendSpy.mockClear();
+  const imageBuffer = Buffer.from('fake image data');
+  parameterBuilder('POST', 'http://restapi.com', '/upload', config)
+    .formData('image', imageBuffer, {
+      filename: 'profile.jpg',
+      contentType: 'image/jpeg',
+    })
+    .build();
+
+  expect(formDataAppendSpy).toHaveBeenCalledWith('image', imageBuffer, {
+    filename: 'profile.jpg',
+    contentType: 'image/jpeg',
+  });
+
   // Clean up
   formDataAppendSpy.mockRestore();
 });
