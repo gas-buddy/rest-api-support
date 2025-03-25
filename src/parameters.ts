@@ -64,6 +64,7 @@ class ParameterBuilder {
   formData(
     name: string,
     value: string | number | boolean | Buffer | Array<string> | Array<Buffer>,
+    options?: { filename?: string; contentType?: string },
   ) {
     const p = this.parameters;
     if (!p.body) {
@@ -73,6 +74,12 @@ class ParameterBuilder {
     // For arrays, stringify them
     if (Array.isArray(value)) {
       p.body.append(name, JSON.stringify(value));
+    } else if (options && (options.filename || options.contentType)) {
+      // Support for files with metadata (images, etc.)
+      p.body.append(name, value, {
+        filename: options.filename,
+        contentType: options.contentType,
+      });
     } else {
       p.body.append(name, value);
     }

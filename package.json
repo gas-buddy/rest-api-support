@@ -1,6 +1,6 @@
 {
   "name": "rest-api-support",
-  "version": "2.0.0-beta.2",
+  "version": "2.0.0-beta.3",
   "description": "URL manipulation and other support infrastructure for making REST api calls",
   "main": "build/index.js",
   "types": "build/index.d.ts",
