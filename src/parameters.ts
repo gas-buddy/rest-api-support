@@ -63,7 +63,7 @@ class ParameterBuilder {
 
   formData(
     name: string,
-    value: string | number | boolean | Buffer | Array<string> | Array<Buffer>,
+    value: string | number | boolean | Buffer | Blob | Array<string> | Array<Buffer>,
     options?: { filename?: string; contentType?: string },
   ) {
     const p = this.parameters;
