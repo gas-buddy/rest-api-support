@@ -68,7 +68,17 @@ class ParameterBuilder {
   ) {
     const p = this.parameters;
     if (!p.body) {
+      if (!this.config.FormData) {
+        throw new Error(
+          'FormData is not available. Please provide a FormData implementation in the config.',
+        );
+      }
+
       p.body = new this.config.FormData();
+
+      // For Node.js form-data library, we'll need to set headers when building
+      // We'll check and handle this in the build() method
+      p.isNodeFormData = typeof p.body.getHeaders === 'function';
     }
 
     // For arrays, stringify them
@@ -103,15 +113,25 @@ class ParameterBuilder {
       url: this.parameters.url,
       method: this.parameters.method,
     };
-    if (this.parameters.headers) {
-      final.headers = this.parameters.headers;
-    }
+
+    // Initialize headers
+    final.headers = this.parameters.headers || {};
+
+    // Handle the request body
     if (this.parameters.body) {
       final.body = this.parameters.body;
+
+      // If this is Node.js form-data, apply its headers to the request
+      if (this.parameters.isNodeFormData && typeof this.parameters.body.getHeaders === 'function') {
+        const formHeaders = this.parameters.body.getHeaders();
+        final.headers = { ...final.headers, ...formHeaders };
+      }
     }
+
     if (this.parameters.query) {
       final.url = `${final.url}?${qs.stringify(this.parameters.query)}`;
     }
+
     return final;
   }
 }

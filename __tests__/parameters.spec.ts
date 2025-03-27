@@ -120,3 +120,35 @@ test('formData parameters', () => {
   // Clean up
   formDataAppendSpy.mockRestore();
 });
+
+test('Node.js form-data headers - explicit constructor', () => {
+  // Create a FormData instance with a mock getHeaders method
+  const mockFormData = new FormData();
+  const getHeadersSpy = jest.spyOn(mockFormData, 'getHeaders').mockImplementation(() => ({
+    'content-type': 'multipart/form-data; boundary=NodeJsFormDataBoundary123',
+  }));
+
+  const mockFormDataConstructor = jest.fn().mockReturnValue(mockFormData);
+
+  const config = {
+    FormData: mockFormDataConstructor,
+    AbortController: jest.fn(),
+    EventSource: jest.fn(),
+    fetch: jest.fn(),
+  } as unknown as FetchConfig;
+
+  // Test headers are applied from form-data
+  const request = parameterBuilder('POST', 'http://restapi.com', '/upload', config)
+    .formData('file', Buffer.from('test file content'))
+    .build();
+
+  // Verify getHeaders was called
+  expect(getHeadersSpy).toHaveBeenCalled();
+
+  // Verify headers were correctly applied from form-data
+  expect(request.headers).toHaveProperty('content-type', 'multipart/form-data; boundary=NodeJsFormDataBoundary123');
+
+  // Cleanup
+  getHeadersSpy.mockRestore();
+});
+
