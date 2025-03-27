@@ -167,8 +167,10 @@ export interface FetchConfig {
 
   /**
    * For multipart (e.g. file uploads)
+   * Can be browser FormData or Node.js form-data
+   * Required when using formData functionality
    */
-  FormData: new () => FormData;
+  FormData: new () => FormData | any;
 
   /**
    * For non-streaming requests
