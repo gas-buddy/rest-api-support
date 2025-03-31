@@ -1,6 +1,6 @@
 import type { AbortController, FetchPerRequestOptions, FetchRequest } from './types/index';
 
-export function addTimeout(
+function addTimeout(
   request: FetchRequest,
   options: FetchPerRequestOptions | undefined,
   AbortController: new () => AbortController,
@@ -16,3 +16,5 @@ export function addTimeout(
   request.signal = abortController.signal;
   return { timer, abortController };
 }
+
+export default addTimeout;

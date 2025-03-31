@@ -1,5 +1,5 @@
 import { autoRetry, retryCount } from './retry';
-import { addTimeout } from './timeout';
+import addTimeout from './timeout';
 import type {
   AbortController,
   CommonFetchResponse,
@@ -16,7 +16,7 @@ interface NodeErrorConstructor {
   captureStackTrace?(targetObject: Object, constructorOpt?: Function): void;
 }
 
-export function fetchHelper<T, R = any>(
+function fetchHelper<T, R = any>(
   config: FetchConfig,
   request: FetchRequest,
   options?: FetchPerRequestOptions,
@@ -129,12 +129,13 @@ export function fetchHelper<T, R = any>(
       ));
       return fetch(request.url, fetchRequest).then(responseHandler).catch(errorHandler);
     }
-    error.responseType = 'error';
-    error.originalStack = placeholderError;
-    if (retryCount(request)) {
-      error.retried = retryCount(request);
-    }
-    throw error;
+    // Create a new error object to avoid modifying the parameter
+    const enhancedError = Object.assign(new Error(error.message), error, {
+      responseType: 'error',
+      originalStack: placeholderError,
+      ...(retryCount(request) ? { retried: retryCount(request) } : {}),
+    }) as FetchError;
+    throw enhancedError;
   };
 
   const finalPromise = promise
@@ -164,3 +165,5 @@ export function fetchHelper<T, R = any>(
     },
   }) as Promise<RestApiSupportFetchResponse<T>>;
 }
+
+export default fetchHelper;

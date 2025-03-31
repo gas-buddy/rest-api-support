@@ -5,7 +5,7 @@ import type {
   RestApiCallSource,
 } from './types/index';
 
-export function eventSourceHelper(
+function eventSourceHelper(
   config: FetchConfig,
   request: FetchRequest,
   options: FetchPerRequestOptions,
@@ -21,3 +21,5 @@ export function eventSourceHelper(
   }
   return promise.then(() => new EventSource(request.url, request));
 }
+
+export default eventSourceHelper;

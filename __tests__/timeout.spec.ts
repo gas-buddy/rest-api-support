@@ -1,7 +1,6 @@
 import fetch from 'node-fetch';
 import nock from 'nock';
-import { fetchHelper } from '../src/fetchHelper';
-import { FetchConfig } from '../src/index';
+import { fetchHelper, FetchConfig } from '../src/index';
 
 describe('test_timeout', () => {
   nock('http://httpbin.org').get('/timeout/1').delay({ head: 50 }).times(3).reply(200);
