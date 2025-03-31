@@ -33,7 +33,7 @@ interface Listeners {
 type GenericEvent = (...args: any[]) => void;
 type EventName = 'message' | 'error' | 'close';
 
-export class ReactNativeEventSource {
+class ReactNativeEventSource {
   position = 0;
 
   isError = false;
@@ -164,3 +164,5 @@ export class ReactNativeEventSource {
     }
   }
 }
+
+export default ReactNativeEventSource;

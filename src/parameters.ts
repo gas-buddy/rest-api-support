@@ -63,7 +63,7 @@ class ParameterBuilder {
 
   formData(
     name: string,
-    value: string | number | boolean | Buffer | Blob | Array<string> | Array<Buffer>,
+    value: string | number | boolean | Buffer | Blob | File | Array<string> | Array<Buffer>,
     options?: { filename?: string; contentType?: string },
   ) {
     const p = this.parameters;
@@ -75,21 +75,28 @@ class ParameterBuilder {
       }
 
       p.body = new this.config.FormData();
-
-      // For Node.js form-data library, we'll need to set headers when building
-      // We'll check and handle this in the build() method
-      p.isNodeFormData = typeof p.body.getHeaders === 'function';
     }
 
-    // For arrays, stringify them
+    // For arrays, append each item individually with the same field name
     if (Array.isArray(value)) {
-      p.body.append(name, JSON.stringify(value));
+      value.forEach((item) => {
+        p.body.append(name, item);
+      });
     } else if (options && (options.filename || options.contentType)) {
       // Support for files with metadata (images, etc.)
-      p.body.append(name, value, {
-        filename: options.filename,
-        contentType: options.contentType,
-      });
+      if (value instanceof Blob || (typeof File !== 'undefined' && value instanceof File)) {
+        // If it's already a Blob or File, just use it with the provided filename
+        p.body.append(name, value, options.filename);
+      } else if (options.filename && options.contentType) {
+        // For other types (Buffer, string, etc.), create a Blob with metadata
+        const blobOptions = { type: options.contentType };
+        const blob = new Blob([value instanceof Buffer ? value : String(value)], blobOptions);
+        p.body.append(name, blob, options.filename);
+      } else if (options.filename) {
+        p.body.append(name, value, options.filename);
+      } else {
+        p.body.append(name, value);
+      }
     } else {
       p.body.append(name, value);
     }
@@ -114,18 +121,12 @@ class ParameterBuilder {
       method: this.parameters.method,
     };
 
-    // Initialize headers
-    final.headers = this.parameters.headers || {};
+    if (this.parameters.headers) {
+      final.headers = this.parameters.headers;
+    }
 
-    // Handle the request body
     if (this.parameters.body) {
       final.body = this.parameters.body;
-
-      // If this is Node.js form-data, apply its headers to the request
-      if (this.parameters.isNodeFormData && typeof this.parameters.body.getHeaders === 'function') {
-        const formHeaders = this.parameters.body.getHeaders();
-        final.headers = { ...final.headers, ...formHeaders };
-      }
     }
 
     if (this.parameters.query) {
@@ -136,7 +137,7 @@ class ParameterBuilder {
   }
 }
 
-export function parameterBuilder(
+function parameterBuilder(
   method: string,
   baseUrl: string,
   path: string,
@@ -144,3 +145,5 @@ export function parameterBuilder(
 ) {
   return new ParameterBuilder(method, baseUrl, path, config);
 }
+
+export default parameterBuilder;

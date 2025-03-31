@@ -1,6 +1,6 @@
 {
   "name": "rest-api-support",
-  "version": "2.0.0-beta.5",
+  "version": "2.0.0-beta.6",
   "description": "URL manipulation and other support infrastructure for making REST api calls",
   "main": "build/index.js",
   "types": "build/index.d.ts",
@@ -42,8 +42,10 @@
     "typescript": "^4.9.3"
   },
   "dependencies": {
-    "form-data": "^4.0.0",
     "query-string": "^7.1.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "packageManager": "yarn@3.2.4"
 }
