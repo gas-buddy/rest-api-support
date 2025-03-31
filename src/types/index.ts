@@ -7,6 +7,14 @@ export interface AbortController {
   signal: AbortSignal;
 }
 
+/**
+ * Options for formData method to provide filename and content type
+ */
+export interface FormDataOption {
+  filename?: string;
+  contentType?: string;
+}
+
 export interface EventSource {
   removeAllListeners(): void;
   removeEventListener(name: string, handler: (data: any) => void, options?: any): void;

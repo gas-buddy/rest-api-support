@@ -1,5 +1,5 @@
 import qs from 'query-string';
-import type { FetchConfig, FetchRequest } from './types/index';
+import type { FetchConfig, FetchRequest, FormDataOption } from './types/index';
 
 class ParameterBuilder {
   parameters: { [key: string]: any };
@@ -63,8 +63,8 @@ class ParameterBuilder {
 
   formData(
     name: string,
-    value: string | number | boolean | Buffer | Blob | File | Array<string> | Array<Buffer>,
-    options?: { filename?: string; contentType?: string },
+    value: string | number | boolean | Buffer | Blob | File | Array<string | Buffer | Blob | File>,
+    options?: FormDataOption | Array<FormDataOption>,
   ) {
     const p = this.parameters;
     if (!p.body) {
@@ -77,28 +77,63 @@ class ParameterBuilder {
       p.body = new this.config.FormData();
     }
 
+    // Helper function to handle appending a single item with metadata
+    const appendItem = (
+      itemName: string,
+      item: any,
+      itemOptions?: { filename?: string; contentType?: string },
+    ) => {
+      // No options case - simple append
+      if (!itemOptions || (!itemOptions.filename && !itemOptions.contentType)) {
+        p.body.append(itemName, item);
+        return;
+      }
+
+      // For FormData API
+      // If it's already a Blob or File, just use it with the provided filename
+      if (item instanceof Blob || (typeof File !== 'undefined' && item instanceof File)) {
+        p.body.append(itemName, item, itemOptions.filename);
+        return;
+      }
+      // If both filename and contentType, create a Blob
+      if (itemOptions.filename && itemOptions.contentType) {
+        // Check if Blob is available
+        if (typeof Blob !== 'undefined') {
+          const blobOptions = { type: itemOptions.contentType };
+          const blob = new Blob([item instanceof Buffer ? item : String(item)], blobOptions);
+          p.body.append(itemName, blob, itemOptions.filename);
+        } else {
+          // Fallback for environments without Blob
+          p.body.append(itemName, item);
+        }
+        return;
+      }
+
+      // Just filename case
+      if (itemOptions.filename) {
+        p.body.append(itemName, item, itemOptions.filename);
+        return;
+      }
+      // Fallback - should not normally be reached
+      p.body.append(itemName, item);
+    };
+
     // For arrays, append each item individually with the same field name
     if (Array.isArray(value)) {
-      value.forEach((item) => {
-        p.body.append(name, item);
-      });
-    } else if (options && (options.filename || options.contentType)) {
-      // Support for files with metadata (images, etc.)
-      if (value instanceof Blob || (typeof File !== 'undefined' && value instanceof File)) {
-        // If it's already a Blob or File, just use it with the provided filename
-        p.body.append(name, value, options.filename);
-      } else if (options.filename && options.contentType) {
-        // For other types (Buffer, string, etc.), create a Blob with metadata
-        const blobOptions = { type: options.contentType };
-        const blob = new Blob([value instanceof Buffer ? value : String(value)], blobOptions);
-        p.body.append(name, blob, options.filename);
-      } else if (options.filename) {
-        p.body.append(name, value, options.filename);
+      // Check if options is also an array
+      if (Array.isArray(options)) {
+        // If options is an array, use corresponding option for each item
+        value.forEach((item, index) => {
+          const itemOptions = index < options.length ? options[index] : undefined;
+          appendItem(name, item, itemOptions);
+        });
       } else {
-        p.body.append(name, value);
+        // If options is not an array, use the same options for all items
+        value.forEach((item) => appendItem(name, item, options));
       }
     } else {
-      p.body.append(name, value);
+      // For non-array values, options should not be an array
+      appendItem(name, value, Array.isArray(options) ? options[0] : options);
     }
 
     return this;

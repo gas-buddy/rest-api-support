@@ -122,6 +122,56 @@ test('formData parameters', () => {
   // because it's creating a Blob internally)
   expect(formDataAppendSpy).toHaveBeenCalled();
 
+  // Test with array of Blob objects
+  formDataAppendSpy.mockClear();
+
+  // Create actual Blob objects instead of mocks
+  const mockBlob1 = new Blob(['image1 data'], { type: 'image/png' });
+  const mockBlob2 = new Blob(['image2 data'], { type: 'image/jpeg' });
+
+  const blobArray = [mockBlob1, mockBlob2];
+
+  // Test with array of Blobs and a filename
+  parameterBuilder('POST', 'http://restapi.com', '/upload', config)
+    .formData('images', blobArray, {
+      filename: 'image_collection.zip',
+    })
+    .build();
+
+  // Should append each Blob with the filename
+  expect(formDataAppendSpy).toHaveBeenCalledWith('images', mockBlob1, 'image_collection.zip');
+  expect(formDataAppendSpy).toHaveBeenCalledWith('images', mockBlob2, 'image_collection.zip');
+
+  // Test with array of Buffers with metadata
+  formDataAppendSpy.mockClear();
+  const bufferImagesArray = [Buffer.from('image1 data'), Buffer.from('image2 data')];
+
+  parameterBuilder('POST', 'http://restapi.com', '/upload', config)
+    .formData('buffer_images', bufferImagesArray, {
+      filename: 'buffer_images.zip',
+      contentType: 'application/zip',
+    })
+    .build();
+
+  // For Buffer arrays with metadata, each Buffer should be converted to a Blob
+  // We can't easily test the exact Blob creation, so we just verify append was called twice
+  expect(formDataAppendSpy).toHaveBeenCalledTimes(2);
+
+  // Test with array of values with array of options
+  formDataAppendSpy.mockClear();
+  const mixedArray = ['text1', Buffer.from('buffer1')];
+  const optionsArray = [
+    { filename: 'text.txt', contentType: 'text/plain' },
+    { filename: 'binary.dat', contentType: 'application/octet-stream' },
+  ];
+
+  parameterBuilder('POST', 'http://restapi.com', '/upload', config)
+    .formData('mixed_data', mixedArray, optionsArray)
+    .build();
+
+  // Should have been called twice (once for each item)
+  expect(formDataAppendSpy).toHaveBeenCalledTimes(2);
+
   // Clean up
   formDataAppendSpy.mockRestore();
 });
