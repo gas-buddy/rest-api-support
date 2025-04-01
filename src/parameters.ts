@@ -61,6 +61,47 @@ class ParameterBuilder {
     return this;
   }
 
+  /**
+   * Send a form URL encoded body
+   *
+   * @param {object} data The key-value pairs to be encoded as form data
+   */
+  formUrlEncoded(data: { [key: string]: string | number | boolean | string[] }) {
+    const p = this.parameters;
+    p.headers = p.headers || {};
+    p.headers['content-type'] = 'application/x-www-form-urlencoded';
+
+    // Use URLSearchParams for standard-compliant encoding
+    const params = new URLSearchParams();
+
+    // Append each key-value pair, handling arrays
+    Object.entries(data).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        // Handle arrays by adding multiple entries with the same key
+        value.forEach((item) => params.append(key, String(item)));
+      } else {
+        params.append(key, String(value));
+      }
+    });
+
+    p.body = params.toString();
+    return this;
+  }
+
+  /**
+   * Adds form data entries to a multipart/form-data request
+   *
+   * @param {string} name The field name to use in the form data
+   * @param {string|number|boolean|Buffer|Blob|File|Array} value The field value(s) to send
+   *        - Primitive values (string, number, boolean) will be converted to strings
+   *        - Buffer objects are sent as binary data
+   *        - Blob or File objects are sent directly
+   *        - Arrays can contain any of the above types and create multiple entries
+   * @param {FormDataOption|Array<FormDataOption>} options Optional metadata for the form data
+   *        - filename: Sets the filename for a file upload (e.g., "image.jpg")
+   *        - contentType: Sets the content type for the data (e.g., "image/jpeg")
+   *        - For arrays, you can provide a single options object or an array of options
+   */
   formData(
     name: string,
     value: string | number | boolean | Buffer | Blob | File | Array<string | Buffer | Blob | File>,
