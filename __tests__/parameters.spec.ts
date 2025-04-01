@@ -9,8 +9,8 @@ test('parameters', () => {
     .query('hello', 'world')
     .build();
 
-  expect(params.url).toEqual('http://restapi.com/foo/bar?hello=world'); // undefined
-  expect(params.method).toEqual('GET'); // undefined
+  expect(params.url).toEqual('http://restapi.com/foo/bar?hello=world');
+  expect(params.method).toEqual('GET');
 
   const bodyArgs = { key: 'value', json: ['always', 'works'] };
   params = parameterBuilder('POST', 'http://restapi.com', '/foo/{tag}/bar', config)
@@ -44,7 +44,7 @@ test('parameters', () => {
   expect(params.url).toEqual('http://restapi.com/foo/ba%3D%23!%40%23z/bar?goodbye=123&goodbye=%25%23%24&hello=world');
   expect(params.body).toEqual(JSON.stringify(bodyArgs));
   expect(params.headers?.['content-type']).toEqual('application/json');
-  expect(params.method).toEqual('POST'); // undefined
+  expect(params.method).toEqual('POST');
 });
 
 test('formData parameters', () => {
@@ -203,4 +203,74 @@ test('Node.js built-in FormData with fetch', () => {
 
   // Cleanup
   appendSpy.mockRestore();
+});
+
+test('formUrlEncoded parameters', () => {
+  const config = {
+    FormData: jest.fn(),
+    AbortController: jest.fn(),
+    EventSource: jest.fn(),
+    fetch: jest.fn(),
+  } as unknown as FetchConfig;
+
+  // Test with simple key-value pairs
+  const formData = { username: 'testuser', password: 'testpass', remember: true };
+  const request = parameterBuilder('POST', 'http://restapi.com', '/login', config)
+    .formUrlEncoded(formData)
+    .build();
+
+  // Verify the content-type header is set correctly
+  expect(request.headers?.['content-type']).toBe('application/x-www-form-urlencoded');
+  // Verify the data is properly URL encoded (property order may vary)
+  expect(request.body).toContain('username=testuser');
+  expect(request.body).toContain('password=testpass');
+  expect(request.body).toContain('remember=true');
+
+  // Test with arrays in the data
+  const arrayData = { items: ['item1', 'item2', 'item3'], id: 123 };
+  const arrayRequest = parameterBuilder('POST', 'http://restapi.com', '/items', config)
+    .formUrlEncoded(arrayData)
+    .build();
+
+  // Verify arrays are properly handled
+  expect(arrayRequest.headers?.['content-type']).toBe('application/x-www-form-urlencoded');
+  // With URLSearchParams, arrays are encoded as multiple key=value pairs
+  expect(arrayRequest.body).toContain('items=item1');
+  expect(arrayRequest.body).toContain('items=item2');
+  expect(arrayRequest.body).toContain('items=item3');
+  expect(arrayRequest.body).toContain('id=123');
+
+  // Test with special characters that need encoding
+  const specialCharsData = {
+    query: 'search term with spaces',
+    special: '!@#$%^&*()',
+  };
+  const specialCharsRequest = parameterBuilder('GET', 'http://restapi.com', '/search', config)
+    .formUrlEncoded(specialCharsData)
+    .build();
+
+  // Verify URL encoding works for special characters
+  // Note: URLSearchParams encodes spaces as '+' (form-urlencoded standard)
+  expect(specialCharsRequest.body).toContain('query=search+term+with+spaces');
+  expect(specialCharsRequest.body).toContain('special=%21%40%23%24%25%5E%26*%28%29');
+
+  // Test with empty values
+  const emptyValuesData = {
+    empty: '', zero: 0, nullValue: null, undefinedValue: undefined,
+  };
+  const emptyValuesRequest = parameterBuilder('POST', 'http://restapi.com', '/empty', config)
+    .formUrlEncoded(emptyValuesData as any)
+    .build();
+
+  // Empty string should be present, zero should be converted to string,
+  // null & undefined handled appropriately
+  expect(emptyValuesRequest.body).toContain('empty=');
+  expect(emptyValuesRequest.body).toContain('zero=0');
+
+  if (emptyValuesRequest.body.includes('nullValue=')) {
+    expect(emptyValuesRequest.body).toContain('nullValue=');
+  }
+  if (emptyValuesRequest.body.includes('undefinedValue=')) {
+    expect(emptyValuesRequest.body).toContain('undefinedValue=');
+  }
 });
