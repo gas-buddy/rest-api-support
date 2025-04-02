@@ -65,8 +65,9 @@ class ParameterBuilder {
    * Send a form URL encoded body
    *
    * @param {object} data The key-value pairs to be encoded as form data
+   *        - If a value is undefined or null, the field will be skipped (optional field)
    */
-  formUrlEncoded(data: { [key: string]: string | number | boolean | string[] }) {
+  formUrlEncoded(data: { [key: string]: string | number | boolean | string[] | undefined | null }) {
     const p = this.parameters;
     p.headers = p.headers || {};
     p.headers['content-type'] = 'application/x-www-form-urlencoded';
@@ -74,11 +75,21 @@ class ParameterBuilder {
     // Use URLSearchParams for standard-compliant encoding
     const params = new URLSearchParams();
 
-    // Append each key-value pair, handling arrays
+    // Append each key-value pair, handling arrays and skipping undefined/null values
     Object.entries(data).forEach(([key, value]) => {
+      // Skip undefined and null values (optional fields)
+      if (value === undefined || value === null) {
+        return;
+      }
+
       if (Array.isArray(value)) {
         // Handle arrays by adding multiple entries with the same key
-        value.forEach((item) => params.append(key, String(item)));
+        value.forEach((item) => {
+          // Skip undefined and null items within arrays
+          if (item !== undefined && item !== null) {
+            params.append(key, String(item));
+          }
+        });
       } else {
         params.append(key, String(value));
       }
@@ -92,11 +103,13 @@ class ParameterBuilder {
    * Adds form data entries to a multipart/form-data request
    *
    * @param {string} name The field name to use in the form data
-   * @param {string|number|boolean|Buffer|Blob|File|Array} value The field value(s) to send
+   * @param {*} value The field value(s) to send (can be string, number, boolean, Buffer, Blob,
+   *        File, Array, undefined, or null)
    *        - Primitive values (string, number, boolean) will be converted to strings
    *        - Buffer objects are sent as binary data
    *        - Blob or File objects are sent directly
    *        - Arrays can contain any of the above types and create multiple entries
+   *        - If value is undefined or null, the field will be skipped (optional field)
    * @param {FormDataOption|Array<FormDataOption>} options Optional metadata for the form data
    *        - filename: Sets the filename for a file upload (e.g., "image.jpg")
    *        - contentType: Sets the content type for the data (e.g., "image/jpeg")
@@ -104,9 +117,23 @@ class ParameterBuilder {
    */
   formData(
     name: string,
-    value: string | number | boolean | Buffer | Blob | File | Array<string | Buffer | Blob | File>,
+    value:
+    | string
+    | number
+    | boolean
+    | Buffer
+    | Blob
+    | File
+    | Array<string | number | boolean | Buffer | Blob | File | null | undefined>
+    | undefined
+    | null,
     options?: FormDataOption | Array<FormDataOption>,
   ) {
+    // Skip adding this field if value is undefined or null (optional field)
+    if (value === undefined || value === null) {
+      return this;
+    }
+
     const p = this.parameters;
     if (!p.body) {
       if (!this.config.FormData) {
@@ -161,16 +188,21 @@ class ParameterBuilder {
 
     // For arrays, append each item individually with the same field name
     if (Array.isArray(value)) {
+      // Filter out null/undefined values from the array
+      const filteredValues = value.filter((item) => item !== undefined && item !== null);
       // Check if options is also an array
       if (Array.isArray(options)) {
         // If options is an array, use corresponding option for each item
+        // We need to maintain the original indexes for options matching
         value.forEach((item, index) => {
-          const itemOptions = index < options.length ? options[index] : undefined;
-          appendItem(name, item, itemOptions);
+          if (item !== undefined && item !== null) {
+            const itemOptions = index < options.length ? options[index] : undefined;
+            appendItem(name, item, itemOptions);
+          }
         });
       } else {
         // If options is not an array, use the same options for all items
-        value.forEach((item) => appendItem(name, item, options));
+        filteredValues.forEach((item) => appendItem(name, item, options));
       }
     } else {
       // For non-array values, options should not be an array
