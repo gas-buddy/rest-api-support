@@ -172,6 +172,35 @@ test('formData parameters', () => {
   // Should have been called twice (once for each item)
   expect(formDataAppendSpy).toHaveBeenCalledTimes(2);
 
+  // Test with optional properties
+  formDataAppendSpy.mockClear();
+  parameterBuilder('POST', 'http://restapi.com', '/upload', config)
+    .formData('requiredField', 'value')
+    .formData('optionalField1', undefined)
+    .formData('optionalField2', null)
+    .formData('optionalArrayField', [Buffer.from('data1'), 'value2'] as Array<Buffer | string>)
+    .build();
+
+  // Verify required field is added
+  expect(formDataAppendSpy).toHaveBeenCalledWith('requiredField', 'value');
+
+  // Verify optional fields with null/undefined values are skipped
+  const optionalField1Calls = formDataAppendSpy.mock.calls.filter(
+    (call) => call[0] === 'optionalField1',
+  );
+  expect(optionalField1Calls.length).toBe(0);
+
+  const optionalField2Calls = formDataAppendSpy.mock.calls.filter(
+    (call) => call[0] === 'optionalField2',
+  );
+  expect(optionalField2Calls.length).toBe(0);
+
+  // Verify array with null/undefined items
+  const optionalArrayCalls = formDataAppendSpy.mock.calls.filter(
+    (call) => call[0] === 'optionalArrayField',
+  );
+  expect(optionalArrayCalls.length).toBe(2); // Only 2 valid items should be appended
+
   // Clean up
   formDataAppendSpy.mockRestore();
 });
@@ -262,15 +291,36 @@ test('formUrlEncoded parameters', () => {
     .formUrlEncoded(emptyValuesData as any)
     .build();
 
-  // Empty string should be present, zero should be converted to string,
-  // null & undefined handled appropriately
+  // Empty string should be present, zero should be converted to string
   expect(emptyValuesRequest.body).toContain('empty=');
   expect(emptyValuesRequest.body).toContain('zero=0');
 
-  if (emptyValuesRequest.body.includes('nullValue=')) {
-    expect(emptyValuesRequest.body).toContain('nullValue=');
-  }
-  if (emptyValuesRequest.body.includes('undefinedValue=')) {
-    expect(emptyValuesRequest.body).toContain('undefinedValue=');
-  }
+  // null & undefined values should be omitted
+  expect(emptyValuesRequest.body).not.toContain('nullValue=');
+  expect(emptyValuesRequest.body).not.toContain('undefinedValue=');
+
+  // Test with optional properties
+  const optionalData: Record<string, string | number | boolean | string[] | undefined | null> = {
+    required: 'value',
+    optional1: undefined,
+    optional2: null,
+    optionalArray: ['item1', 'item2'],
+  };
+
+  const optionalRequest = parameterBuilder('POST', 'http://restapi.com', '/optional', config)
+    .formUrlEncoded(optionalData)
+    .build();
+
+  // Verify required properties are included
+  expect(optionalRequest.body).toContain('required=value');
+
+  // Verify undefined and null properties are omitted
+  expect(optionalRequest.body).not.toContain('optional1=');
+  expect(optionalRequest.body).not.toContain('optional2=');
+
+  // Verify array handling with null/undefined items
+  expect(optionalRequest.body).toContain('optionalArray=item1');
+  expect(optionalRequest.body).toContain('optionalArray=item2');
+  // No null or undefined values should appear
+  expect((optionalRequest.body.match(/optionalArray=/g) || []).length).toBe(2);
 });
