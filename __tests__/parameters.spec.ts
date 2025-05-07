@@ -56,7 +56,7 @@ test('formData parameters', () => {
 
   // Test with string value
   parameterBuilder('POST', 'http://restapi.com', '/upload', config)
-    .formData('filename', 'test.jpg')
+    .formData({ filename: 'test.jpg' })
     .build();
 
   expect(formDataAppendSpy).toHaveBeenCalledWith('filename', 'test.jpg');
@@ -64,7 +64,7 @@ test('formData parameters', () => {
   // Test with numeric value
   formDataAppendSpy.mockClear();
   parameterBuilder('POST', 'http://restapi.com', '/upload', config)
-    .formData('user_id', 12345)
+    .formData({ user_id: 12345 })
     .build();
 
   expect(formDataAppendSpy).toHaveBeenCalledWith('user_id', 12345);
@@ -73,7 +73,7 @@ test('formData parameters', () => {
   formDataAppendSpy.mockClear();
   const buffer = Buffer.from('test buffer data');
   parameterBuilder('POST', 'http://restapi.com', '/upload', config)
-    .formData('file_data', buffer)
+    .formData({ file_data: buffer })
     .build();
 
   expect(formDataAppendSpy).toHaveBeenCalledWith('file_data', buffer);
@@ -82,7 +82,7 @@ test('formData parameters', () => {
   formDataAppendSpy.mockClear();
   const bufferArray = [Buffer.from('part1'), Buffer.from('part2')];
   parameterBuilder('POST', 'http://restapi.com', '/upload', config)
-    .formData('file_chunks', bufferArray)
+    .formData({ file_chunks: bufferArray })
     .build();
 
   expect(formDataAppendSpy).toHaveBeenCalledWith('file_chunks', bufferArray[0]);
@@ -92,7 +92,7 @@ test('formData parameters', () => {
   formDataAppendSpy.mockClear();
   const stringArray = ['value1', 'value2'];
   parameterBuilder('POST', 'http://restapi.com', '/upload', config)
-    .formData('tags', stringArray)
+    .formData({ tags: stringArray })
     .build();
 
   expect(formDataAppendSpy).toHaveBeenCalledWith('tags', stringArray[0]);
@@ -101,7 +101,7 @@ test('formData parameters', () => {
   // Test with boolean value
   formDataAppendSpy.mockClear();
   parameterBuilder('POST', 'http://restapi.com', '/upload', config)
-    .formData('is_public', true)
+    .formData({ is_public: true })
     .build();
 
   expect(formDataAppendSpy).toHaveBeenCalledWith('is_public', true);
@@ -112,10 +112,10 @@ test('formData parameters', () => {
 
   // Just test that append is called, we can't easily mock the Blob constructor
   parameterBuilder('POST', 'http://restapi.com', '/upload', config)
-    .formData('image', imageBuffer, {
-      filename: 'profile.jpg',
-      contentType: 'image/jpeg',
-    })
+    .formData(
+      { image: imageBuffer },
+      { image: { filename: 'profile.jpg', contentType: 'image/jpeg' } },
+    )
     .build();
 
   // Verify FormData.append was called (we can't check the exact parameters
@@ -133,9 +133,10 @@ test('formData parameters', () => {
 
   // Test with array of Blobs and a filename
   parameterBuilder('POST', 'http://restapi.com', '/upload', config)
-    .formData('images', blobArray, {
-      filename: 'image_collection.zip',
-    })
+    .formData(
+      { images: blobArray },
+      { images: { filename: 'image_collection.zip' } },
+    )
     .build();
 
   // Should append each Blob with the filename
@@ -147,10 +148,10 @@ test('formData parameters', () => {
   const bufferImagesArray = [Buffer.from('image1 data'), Buffer.from('image2 data')];
 
   parameterBuilder('POST', 'http://restapi.com', '/upload', config)
-    .formData('buffer_images', bufferImagesArray, {
-      filename: 'buffer_images.zip',
-      contentType: 'application/zip',
-    })
+    .formData(
+      { buffer_images: bufferImagesArray },
+      { buffer_images: { filename: 'buffer_images.zip', contentType: 'application/zip' } },
+    )
     .build();
 
   // For Buffer arrays with metadata, each Buffer should be converted to a Blob
@@ -166,7 +167,10 @@ test('formData parameters', () => {
   ];
 
   parameterBuilder('POST', 'http://restapi.com', '/upload', config)
-    .formData('mixed_data', mixedArray, optionsArray)
+    .formData(
+      { mixed_data: mixedArray },
+      { mixed_data: optionsArray },
+    )
     .build();
 
   // Should have been called twice (once for each item)
@@ -175,10 +179,12 @@ test('formData parameters', () => {
   // Test with optional properties
   formDataAppendSpy.mockClear();
   parameterBuilder('POST', 'http://restapi.com', '/upload', config)
-    .formData('requiredField', 'value')
-    .formData('optionalField1', undefined)
-    .formData('optionalField2', null)
-    .formData('optionalArrayField', [Buffer.from('data1'), 'value2'] as Array<Buffer | string>)
+    .formData({
+      requiredField: 'value',
+      optionalField1: undefined,
+      optionalField2: null,
+      optionalArrayField: [Buffer.from('data1'), 'value2'] as Array<Buffer | string>,
+    })
     .build();
 
   // Verify required field is added
@@ -205,6 +211,67 @@ test('formData parameters', () => {
   formDataAppendSpy.mockRestore();
 });
 
+test('formData with complex object', () => {
+  const mockFormData = new FormData();
+  const formDataAppendSpy = jest.spyOn(FormData.prototype, 'append');
+  const mockFormDataConstructor = jest.fn().mockReturnValue(mockFormData);
+
+  const config = { FormData: mockFormDataConstructor } as unknown as FetchConfig;
+
+  // Test with a complex object
+  const complexObject = {
+    name: 'Test User',
+    age: 30,
+    isActive: true,
+    profileImage: Buffer.from('fake image data'),
+    tags: ['tag1', 'tag2'],
+    nullField: null,
+    undefinedField: undefined,
+  };
+
+  parameterBuilder('POST', 'http://restapi.com', '/user', config)
+    .formData(complexObject)
+    .build();
+
+  // Verify all non-null/undefined fields were appended
+  expect(formDataAppendSpy).toHaveBeenCalledWith('name', 'Test User');
+  expect(formDataAppendSpy).toHaveBeenCalledWith('age', 30);
+  expect(formDataAppendSpy).toHaveBeenCalledWith('isActive', true);
+  expect(formDataAppendSpy).toHaveBeenCalledWith('profileImage', complexObject.profileImage);
+  expect(formDataAppendSpy).toHaveBeenCalledWith('tags', 'tag1');
+  expect(formDataAppendSpy).toHaveBeenCalledWith('tags', 'tag2');
+
+  // Verify null/undefined fields were skipped
+  const nullFieldCalls = formDataAppendSpy.mock.calls.filter((call) => call[0] === 'nullField');
+  expect(nullFieldCalls.length).toBe(0);
+
+  const undefinedFieldCalls = formDataAppendSpy.mock.calls.filter((call) => call[0] === 'undefinedField');
+  expect(undefinedFieldCalls.length).toBe(0);
+
+  // Test with object and options
+  formDataAppendSpy.mockClear();
+
+  const fileObject = {
+    profile: Buffer.from('profile pic data'),
+    document: Buffer.from('document data'),
+  };
+
+  const optionsObject = {
+    profile: { filename: 'profile.jpg', contentType: 'image/jpeg' },
+    document: { filename: 'doc.pdf', contentType: 'application/pdf' },
+  };
+
+  parameterBuilder('POST', 'http://restapi.com', '/files', config)
+    .formData(fileObject, optionsObject)
+    .build();
+
+  // Can't easily verify Blob creation, but we can verify append was called
+  expect(formDataAppendSpy).toHaveBeenCalled();
+  expect(formDataAppendSpy.mock.calls.length).toBeGreaterThan(0);
+
+  formDataAppendSpy.mockRestore();
+});
+
 test('Node.js built-in FormData with fetch', () => {
   const mockFormData = new FormData();
   const appendSpy = jest.spyOn(mockFormData, 'append');
@@ -221,7 +288,7 @@ test('Node.js built-in FormData with fetch', () => {
   // Test that FormData is properly created and used
   const fileContent = Buffer.from('test file content');
   const request = parameterBuilder('POST', 'http://restapi.com', '/upload', config)
-    .formData('file', fileContent)
+    .formData({ file: fileContent })
     .build();
 
   // Verify append was called with the correct parameters
@@ -323,4 +390,56 @@ test('formUrlEncoded parameters', () => {
   expect(optionalRequest.body).toContain('optionalArray=item2');
   // No null or undefined values should appear
   expect((optionalRequest.body.match(/optionalArray=/g) || []).length).toBe(2);
+});
+
+test('formUrlEncoded with basic objects', () => {
+  const config = {
+    FormData: jest.fn(),
+    AbortController: jest.fn(),
+    EventSource: jest.fn(),
+    fetch: jest.fn(),
+  } as unknown as FetchConfig;
+
+  // Test with simple object with primitive values
+  const simpleObject = {
+    username: 'johnsmith',
+    age: 30,
+    isActive: true,
+    tags: ['user', 'premium'],
+  };
+
+  const simpleRequest = parameterBuilder('POST', 'http://restapi.com', '/user', config)
+    .formUrlEncoded(simpleObject)
+    .build();
+
+  // Verify simple objects are correctly encoded
+  expect(simpleRequest.body).toContain('username=johnsmith');
+  expect(simpleRequest.body).toContain('age=30');
+  expect(simpleRequest.body).toContain('isActive=true');
+  expect(simpleRequest.body).toContain('tags=user');
+  expect(simpleRequest.body).toContain('tags=premium');
+
+  // Test with toString() conversion for non-primitive values
+  const testDate = new Date('2023-01-01T00:00:00.000Z');
+  const objectWithToString = {
+    // Will be converted to string using toString() method
+    date: testDate,
+    // Arrays of primitives are handled individually
+    numbers: [1, 2, 3],
+  };
+
+  const toStringRequest = parameterBuilder('POST', 'http://restapi.com', '/data', config)
+    .formUrlEncoded(objectWithToString)
+    .build();
+
+  // Use URLSearchParams to get the exact expected string
+  const expectedParams = new URLSearchParams();
+  expectedParams.append('date', testDate.toString());
+  expectedParams.append('numbers', '1');
+  expectedParams.append('numbers', '2');
+  expectedParams.append('numbers', '3');
+  const expectedBody = expectedParams.toString();
+
+  // Compare the entire body string - this should match exactly
+  expect(toStringRequest.body).toBe(expectedBody);
 });

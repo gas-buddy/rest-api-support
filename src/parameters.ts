@@ -62,12 +62,16 @@ class ParameterBuilder {
   }
 
   /**
-   * Send a form URL encoded body
+   * Creates an application/x-www-form-urlencoded request
    *
-   * @param {object} data The key-value pairs to be encoded as form data
-   *        - If a value is undefined or null, the field will be skipped (optional field)
+   * @param {object} data Object where each key-value pair is encoded in the form body
+   *        Supports:
+   *        - Primitives (string, number, boolean)
+   *        - Any object with toString() (like Date)
+   *        - Arrays (creates multiple parameters with the same name)
+   *        - undefined/null values are skipped
    */
-  formUrlEncoded(data: { [key: string]: string | number | boolean | string[] | undefined | null }) {
+  formUrlEncoded<T extends Record<string, any>>(data: T) {
     const p = this.parameters;
     p.headers = p.headers || {};
     p.headers['content-type'] = 'application/x-www-form-urlencoded';
@@ -91,6 +95,7 @@ class ParameterBuilder {
           }
         });
       } else {
+        // Handle primitive values
         params.append(key, String(value));
       }
     });
@@ -100,40 +105,25 @@ class ParameterBuilder {
   }
 
   /**
-   * Adds form data entries to a multipart/form-data request
+   * Creates a multipart/form-data request with the provided fields
    *
-   * @param {string} name The field name to use in the form data
-   * @param {*} value The field value(s) to send (can be string, number, boolean, Buffer, Blob,
-   *        File, Array, undefined, or null)
-   *        - Primitive values (string, number, boolean) will be converted to strings
-   *        - Buffer objects are sent as binary data
-   *        - Blob or File objects are sent directly
-   *        - Arrays can contain any of the above types and create multiple entries
-   *        - If value is undefined or null, the field will be skipped (optional field)
-   * @param {FormDataOption|Array<FormDataOption>} options Optional metadata for the form data
-   *        - filename: Sets the filename for a file upload (e.g., "image.jpg")
-   *        - contentType: Sets the content type for the data (e.g., "image/jpeg")
-   *        - For arrays, you can provide a single options object or an array of options
+   * @param {Record<string, any>} dataObject Object where each key becomes a form field
+   *        Supports various value types:
+   *        - Primitives (string, number, boolean)
+   *        - Binary data (Buffer, Blob, File)
+   *        - Arrays of the above (creates multiple fields with the same name)
+   *        - undefined/null values are skipped
+   * @param {Record<string, FormDataOption | Array<FormDataOption>>} optionsObject Optional
+   *        metadata for each field, keyed by field name:
+   *        - filename: Sets filename for uploads (e.g., "image.jpg")
+   *        - contentType: Sets content type (e.g., "image/jpeg")
+   *        - For array fields, provide either a single option or array of options
    */
-  formData(
-    name: string,
-    value:
-    | string
-    | number
-    | boolean
-    | Buffer
-    | Blob
-    | File
-    | Array<string | number | boolean | Buffer | Blob | File | null | undefined>
-    | undefined
-    | null,
-    options?: FormDataOption | Array<FormDataOption>,
+  formData<T extends Record<string, any>>(
+    dataObject: T,
+    optionsObject: Record<string, FormDataOption | Array<FormDataOption>> = {},
   ) {
-    // Skip adding this field if value is undefined or null (optional field)
-    if (value === undefined || value === null) {
-      return this;
-    }
-
+    // Initialize FormData if not already created
     const p = this.parameters;
     if (!p.body) {
       if (!this.config.FormData) {
@@ -141,7 +131,6 @@ class ParameterBuilder {
           'FormData is not available. Please provide a FormData implementation in the config.',
         );
       }
-
       p.body = new this.config.FormData();
     }
 
@@ -149,7 +138,7 @@ class ParameterBuilder {
     const appendItem = (
       itemName: string,
       item: any,
-      itemOptions?: { filename?: string; contentType?: string },
+      itemOptions?: FormDataOption,
     ) => {
       // No options case - simple append
       if (!itemOptions || (!itemOptions.filename && !itemOptions.contentType)) {
@@ -186,28 +175,39 @@ class ParameterBuilder {
       p.body.append(itemName, item);
     };
 
-    // For arrays, append each item individually with the same field name
-    if (Array.isArray(value)) {
-      // Filter out null/undefined values from the array
-      const filteredValues = value.filter((item) => item !== undefined && item !== null);
-      // Check if options is also an array
-      if (Array.isArray(options)) {
-        // If options is an array, use corresponding option for each item
-        // We need to maintain the original indexes for options matching
-        value.forEach((item, index) => {
-          if (item !== undefined && item !== null) {
-            const itemOptions = index < options.length ? options[index] : undefined;
-            appendItem(name, item, itemOptions);
-          }
-        });
-      } else {
-        // If options is not an array, use the same options for all items
-        filteredValues.forEach((item) => appendItem(name, item, options));
+    // Process each field in the data object
+    Object.entries(dataObject).forEach(([fieldName, value]) => {
+      // Skip adding this field if value is undefined or null (optional field)
+      if (value === undefined || value === null) {
+        return;
       }
-    } else {
-      // For non-array values, options should not be an array
-      appendItem(name, value, Array.isArray(options) ? options[0] : options);
-    }
+
+      // Get options for this field if provided
+      const fieldOptions = optionsObject[fieldName];
+
+      // For arrays, append each item individually with the same field name
+      if (Array.isArray(value)) {
+        // Filter out null/undefined values from the array
+        const filteredValues = value.filter((item) => item !== undefined && item !== null);
+
+        // Check if options is also an array
+        if (Array.isArray(fieldOptions)) {
+          // If options is an array, use corresponding option for each item
+          value.forEach((item, index) => {
+            if (item !== undefined && item !== null) {
+              const itemOptions = index < fieldOptions.length ? fieldOptions[index] : undefined;
+              appendItem(fieldName, item, itemOptions);
+            }
+          });
+        } else {
+          // If options is not an array, use the same options for all items
+          filteredValues.forEach((item) => appendItem(fieldName, item, fieldOptions));
+        }
+      } else {
+        // For non-array values
+        appendItem(fieldName, value, Array.isArray(fieldOptions) ? fieldOptions[0] : fieldOptions);
+      }
+    });
 
     return this;
   }
